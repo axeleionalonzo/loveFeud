@@ -67,6 +67,14 @@ $.mobile.document
                     $.mobile.removeActiveLinkClass( true );
                     $( "#section" ).text( processedHash.queryParameters.section );
                 });
+            } elseif ( processedHash.cleanHash === "#displayDataPage_player2" ) {
+                $( "#displayDataPage_player2" ).jqmData( "url", processedHash.parsed.hash );
+                data.options.allowSamePageTransition = ( data.options.fromPage &&
+                    data.options.fromPage.attr( "id" ) === "displayDataPage_player2" );
+                $.mobile.activePage.animationComplete( function() {
+                    $.mobile.removeActiveLinkClass( true );
+                    $( "#section" ).text( processedHash.queryParameters.section );
+                });
             }
         }
     });
