@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Love Feud</title>
+			
+			<link rel="stylesheet" type="text/css" href="css/jquery.mobile-1.3.1.min.css" />
+			<link rel="stylesheet" type="text/css" href="css/jqm-demos.css" />
+			<link rel="stylesheet" type="text/css" href="css/font.css" />
+			
+			<script src="cordova.js"></script>
+			<script src="js/navigation.js"></script>
+			<script src="js/jquery-1.9.1.min.js"></script>
+			<script src="js/jquery.mobile-1.3.1.min.js"></script>
+			<script type="text/javascript" charset="utf-8">
+		$(document).ready(function() {
+				document.addEventListener("deviceready", onDeviceReady, false);
+				var db = window.openDatabase("Database", "1.0", "LoveFeud", 200000);
+				var resource;
+
+				function onDeviceReady() {
+					db.transaction(populateDB, errorCB, successCB);
+					document.addEventListener('backbutton', onBack, false)
+				}
+
+				function onBack() {
+					if ($.mobile.activePage.is('#index')) {
+						navigator.app.exitApp()
+					} else {
+						db.transaction(queryDB, errorCB)
+					}
+				}
+				
+				function populateDB(tx) {
+					tx.executeSql('CREATE TABLE IF NOT EXISTS Questions(id INTEGER PRIMARY KEY AUTOINCREMENT,\
+			question TEXT UNIQUE NOT NULL,answer TEXT NOT NULL,player TEXT NOT NULL)\
+			');
+					tx.executeSql('SELECT * FROM Questions', [], querySuccess, errorCB)
+				}
+
+				function successCB() {
+					db.transaction(queryDB, errorCB)
+				}
+
+				function queryDB(tx) {
+					tx.executeSql('SELECT * FROM Questions', [], querySuccess, errorCB)
+				}
+				
+				function querySuccess(tx, results) {
+					$.mobile.showPageLoadingMsg(true);
+					var len = results.rows.length;
+					$("#questionList").html('');
+					for (var i = 0; i < len; i++) {
+						var row = results.rows.item(i);
+						var htmlData = '<li id="' + row["id"] + '"><a href="#">' + row["question"] + '</a></li>';
+						$("#questionList").append(htmlData).listview('refresh')
+					}
+					$.mobile.hidePageLoadingMsg()
+				}
+				
+				function errorCB(err) {}
+				$("#question-page .error").html('').hide();
+				$(".addNew").bind("click", function(event) {
+					$("#question-page .error").html('').hide();
+				});
+
+				$("#save").bind("click", function(event) {
+					var question = $.trim($("#question").val()).replace(/[^A-Za-z0-9 ]/g, '');
+					var answer = $.trim($("#answer").val());
+					var player = $.trim($("#player").val());
+					console.log(answer + ' ' + question + ' ' + player);
+							var num;
+							db.transaction(function(tx) {
+								tx.executeSql("SELECT question FROM Questions;", [], function(tx, results) {
+									num = results.rows.length;
+									console.log('ssssssssss' + num);
+									if (num > 4) {
+										resetForm();
+										var y = confirm("You have already created 5 Questions. Its Player 2's turn. Do you want to proceed?");
+										if (y == true) {
+											$.mobile.changePage($("#question-page2"), {
+											})
+										} else {
+											$.mobile.changePage($("#question-page"), {
+											})
+										}
+									} else {
+										if (question == '') {
+											$("#question-page .error").html("Please enter the Question").show()
+										} else if (answer == '') {
+											$("#question-page .error").html("Please enter the Answer").show()
+										} else {
+											resetForm();
+											var id = $("#id").val();
+											$("#id").val('');
+											if (id == '') {
+												var len;
+												db.transaction(function(tx) {
+													tx.executeSql("SELECT question FROM Questions WHERE question=?;", [question], function(tx, results) {
+														len = results.rows.length;
+														console.log(len);
+														if (len >= 1) {
+															$("#question-page .error").html('Question already exists.').show()
+														} else {
+															db.transaction(function(tx) {
+																tx.executeSql("INSERT INTO Questions (question, answer, player) VALUES  (?, ?, ?)", [question, answer, player], queryDB, errorCB)
+																console.log(question + ' ' + answer + ' ' + player);
+															});
+															app.addEvent();
+															db.transaction(queryDB, errorCB)
+														}
+													})
+												})
+											} else {
+												console.log("start update");
+												db.transaction(function(tx) {
+													tx.executeSql("UPDATE Questions SET question=?, answer=?, player=? WHERE id=? ", [question, answer, player, id], queryDB, errorCB)
+												});
+												console.log(question + ' ' + answer);
+												db.transaction(queryDB, errorCB)
+											}
+										}
+									}
+								})
+							})
+				});
+
+				$(".refresh").bind("click", function(event) {
+					db.transaction(queryDB, errorCB)
+				});
+				
+				$(".back").bind("click", function(event) {
+					resetForm();
+					db.transaction(queryDB, errorCB)
+				});
+				
+				function resetForm() {
+					$("#question-page .error").html('').hide();
+					$("#question-page #question").val('');
+					$("#question-page #answer").val('')
+				}
+				
+				$("#question-page [data-role='content'] ol").on('tap taphold', 'li', function(event) {
+					event.preventDefault();
+					event.stopImmediatePropagation();
+					var liId = this.id;
+					if (event.type === 'taphold') {
+						var $popup = $('#actionList-popup');
+						$("#actionList").html('');
+						$("#actionList").append('<li id="edit&' + liId + '">Edit</li>').listview('refresh');
+						$("#actionList").append('<li id="delete&' + liId + '">Delete</li>').listview('refresh');
+						$popup.popup();
+						$popup.popup('open');
+						$("#tapHoldCheck").val('true')
+					} else if (event.type === 'tap') {
+						if ($("#tapHoldCheck").val() == '') {
+							db.transaction(function(tx) {
+								tx.executeSql("SELECT question, answer, player FROM Questions WHERE id=?;", [liId], function(tx, results) {
+									var row = results.rows.item(0);
+									$.mobile.showPageLoadingMsg(true);
+									$.mobile.changePage($("#displayDataPage"), {
+									});
+									$("#feudQuestion").html(row['question']);
+									$("#feudAnswer").html(row['answer']);
+									$("#feudPlayer").html(row['player']);
+									$('#dataList').trigger('create');
+									$('#dataList').listview('refresh');
+									$.mobile.hidePageLoadingMsg()
+								})
+							})
+						}
+					}
+				});
+
+				$('#actionList-popup').bind({
+					popupafterclose: function(event, ui) {
+						$("#tapHoldCheck").val('')
+					}
+				});
+
+				$("#question-page [data-role='popup'] ol").on('click', 'li', function(event) {
+					var action_liId = this.id.split('&');
+					var action = action_liId[0];
+					var id = action_liId[1];
+					if (action == 'edit') {
+						db.transaction(function(tx) {
+							tx.executeSql("SELECT question, answer, player FROM Questions WHERE id=?;", [id], function(tx, results) {
+								var row = results.rows.item(0);
+								$("#question").val(row['question']);
+								$("#answer").val(row['answer']);
+								$("#player").val(row['player']);
+								$("#id").val(id);
+								$.mobile.changePage($("#question-page"), {
+								})
+							})
+						})
+					}
+					if (action == 'delete') {
+						var y = confirm("Are you sure?");
+						if (y == true) {
+							db.transaction(function(tx) {
+								tx.executeSql("DELETE FROM Questions WHERE id=?", [id], queryDB, errorCB)
+							})
+							$.mobile.changePage($("#question-page"), {
+						})
+						} else {
+							$.mobile.changePage($("#question-page"), {
+							})
+						}
+					}
+				});
+
+				function onConfirm(buttonIndex, id) {
+					if (buttonIndex === 1) {
+						db.transaction(function(tx) {
+							tx.executeSql("DELETE FROM Questions WHERE id=?", [id], queryDB, errorCB)
+						})
+						$.mobile.changePage($("#question-page"), {
+						})
+					}
+					if (buttonIndex === 2) {
+						$.mobile.changePage($("#question-page"), {
+						})
+					}
+				}
+			});
+				
+	</script>
+</head>
+<body>
+
+	<!-- index -->
+	<div data-role="page" class="jqm-demos" id="index" data-title="index">
+		<div align="center" role="main" class="ui-content jqm-content jqm-fullwidth">
+		
+			<br>
+			<br>
+			<br>
+			<br>
+
+			<h1><font color="red">Love</font> Feud</h1>
+			
+			<br>
+
+		<div role="main" class="ui-content">
+			
+			<br>
+			
+			<a href="#question-page" id="questions" data-role="button" data-inline="true">Start</a>
+
+			<br>
+
+			<a href="#third-page" data-role="button" data-theme="c" data-inline="true">Info</a>
+		</div>
+
+		</div><!-- /content -->
+
+	</div>
+	<!-- index End -->
+
+	<!-- Question Page -->
+	<div id="question-page" data-role="page" data-url="question-page">
+		<div data-role="header" data-theme="c" data-position="fixed">
+			<h1><font color="red">Love</font> Feud</h1>
+			<a href="#index" data-role="button" data-theme="c" data-inline="true">Back</a>
+			<a href="#" id="save" data-role="button" data-theme="c" data-inline="true">Save</a>
+		</div><!-- /header -->
+		
+		<div align="center" role="main" class="ui-content jqm-content jqm-fullwidth">
+            <div data-role="content">
+			<br>
+                <font color="red"><div class='error'></div></font>
+				
+                <div data-role="fieldcontain">
+                    <label for="question">Question:</label>
+                    <input type="text" name="question" id="question" required="true" maxlength="50" value="" />
+                </div>
+                <div data-role="fieldcontain">
+                    <label for="answer">Answer:</label>
+                    <input type="text" name="answer" id="answer" required="true" maxlength="50" value="" />
+                </div>
+
+                <input type="hidden" name="player" id="player" required="true" maxlength="50" value="player1" />
+                <input type="hidden" name="id" id="id" value="" />
+
+                <br>
+                <ol data-role="listview" id="questionList">  </ol>
+            </div>
+			<br>
+			
+			<div data-role="popup" id="actionList-popup" data-overlay-theme="c">
+				<ol data-role="listview" id="actionList"></ol>
+            </div>
+            <input type="hidden" id="tapHoldCheck" value="" />
+			
+		</div><!-- /content -->
+		
+		<div align="center" class="changePlayer" data-role="footer" data-theme="c" data-position="fixed">
+		</div><!-- /footer -->
+	</div>
+	<!-- Question Page End -->
+	
+	<!-- Question Page for Player 2 -->
+	<div id="question-page2" data-role="page" data-url="question-page2">
+		<div data-role="header" data-theme="c" data-position="fixed">
+			<h1><font color="red">Love</font> Feud</h1>
+			<a href="#question-page" data-role="button" data-theme="c" data-inline="true">Back</a>
+			<a href="#" id="save2" data-role="button" data-theme="c" data-inline="true">Save</a>
+		</div><!-- /header -->
+		
+		<div align="center" role="main" class="ui-content jqm-content jqm-fullwidth">
+            <div data-role="content">
+			<br>
+                <div class='error'></div>
+				
+                <div data-role="fieldcontain">
+					<label for="question">Question:</label>
+                    <input type="text" name="question" id="question" required="true" maxlength="50" value="" />
+                </div>
+                <div data-role="fieldcontain">
+                    <label for="answer">Answer:</label>
+                    <input type="text" name="answer" id="answer" required="true" maxlength="50" value="" />
+                </div>
+
+                <input type="hidden" name="player" id="player" required="true" maxlength="50" value="player2" />
+                <input type="hidden" name="id" id="id" value="" />
+
+                <br>
+                <ol data-role="listview" id="questionList2">  </ol>
+            </div>
+			<br>
+
+			<div data-role="popup" id="actionList2-popup" data-overlay-theme="c">
+				<ol data-role="listview" id="actionList2"></ol>
+            </div>
+            <input type="hidden" id="tapHoldCheck" value="" />
+
+		</div><!-- /content -->
+	</div>
+	<!-- Question Page for Player 2 End -->
+	
+	<div id="third-page" data-role="page" data-url="third-page">
+		<div data-role="header" data-theme="c"  data-position="fixed">
+			<h1><font color="red">Love</font> Feud</h1>
+			<a href="#index" data-role="button" data-theme="c" data-inline="true">Back</a>
+		</div><!-- /header -->
+		
+		<div align="center" role="main" class="ui-content jqm-content jqm-fullwidth">
+			<p>About <font color="red">Love</font> Feud.<p>
+		</div><!-- /content -->
+	</div>
+	
+	<div id="displayDataPage" data-role="page" data-url="displayDataPage">
+		<div data-role="header" data-theme="c"  data-position="fixed">
+			<h1><font color="red">Love</font> Feud</h1>
+			<a href="#question-page" data-role="button" data-theme="c" data-inline="true">Back</a>
+		</div><!-- /header -->
+		
+        <div data-role="content">
+			<ul data-role="listview" id="dataList">
+				<li>Question : <span id="feudQuestion"></span></li>
+				<li>Answer : <span id="feudAnswer"></span></li>
+				<li>Player : <span id="feudPlayer"></span></li>
+			</ul>
+        </div><!-- /content -->
+	</div>
+	
+</body>
+</html>
