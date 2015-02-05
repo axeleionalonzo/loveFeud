@@ -75,6 +75,78 @@ $.mobile.document
                     $.mobile.removeActiveLinkClass( true );
                     $( "#section" ).text( processedHash.queryParameters.section );
                 });
+            } elseif ( processedHash.cleanHash === "#start_game" ) {
+                $( "#start_game" ).jqmData( "url", processedHash.parsed.hash );
+                data.options.allowSamePageTransition = ( data.options.fromPage &&
+                    data.options.fromPage.attr( "id" ) === "start_game" );
+                $.mobile.activePage.animationComplete( function() {
+                    $.mobile.removeActiveLinkClass( true );
+                    $( "#section" ).text( processedHash.queryParameters.section );
+                });
+            } elseif ( processedHash.cleanHash === "#player2_ingame_1" ) {
+                $( "#player2_ingame_1" ).jqmData( "url", processedHash.parsed.hash );
+                data.options.allowSamePageTransition = ( data.options.fromPage &&
+                    data.options.fromPage.attr( "id" ) === "player2_ingame_1" );
+                $.mobile.activePage.animationComplete( function() {
+                    $.mobile.removeActiveLinkClass( true );
+                    $( "#section" ).text( processedHash.queryParameters.section );
+                });
+            } elseif ( processedHash.cleanHash === "#player2_ingame_2" ) {
+                $( "#player2_ingame_2" ).jqmData( "url", processedHash.parsed.hash );
+                data.options.allowSamePageTransition = ( data.options.fromPage &&
+                    data.options.fromPage.attr( "id" ) === "player2_ingame_2" );
+                $.mobile.activePage.animationComplete( function() {
+                    $.mobile.removeActiveLinkClass( true );
+                    $( "#section" ).text( processedHash.queryParameters.section );
+                });
+            } elseif ( processedHash.cleanHash === "#player1_entry" ) {
+                $( "#player1_entry" ).jqmData( "url", processedHash.parsed.hash );
+                data.options.allowSamePageTransition = ( data.options.fromPage &&
+                    data.options.fromPage.attr( "id" ) === "player1_entry" );
+                $.mobile.activePage.animationComplete( function() {
+                    $.mobile.removeActiveLinkClass( true );
+                    $( "#section" ).text( processedHash.queryParameters.section );
+                });
+            } elseif ( processedHash.cleanHash === "#player1_ingame_1" ) {
+                $( "#player1_ingame_1" ).jqmData( "url", processedHash.parsed.hash );
+                data.options.allowSamePageTransition = ( data.options.fromPage &&
+                    data.options.fromPage.attr( "id" ) === "player1_ingame_1" );
+                $.mobile.activePage.animationComplete( function() {
+                    $.mobile.removeActiveLinkClass( true );
+                    $( "#section" ).text( processedHash.queryParameters.section );
+                });
+            } elseif ( processedHash.cleanHash === "#player1_ingame_2" ) {
+                $( "#player1_ingame_2" ).jqmData( "url", processedHash.parsed.hash );
+                data.options.allowSamePageTransition = ( data.options.fromPage &&
+                    data.options.fromPage.attr( "id" ) === "player1_ingame_2" );
+                $.mobile.activePage.animationComplete( function() {
+                    $.mobile.removeActiveLinkClass( true );
+                    $( "#section" ).text( processedHash.queryParameters.section );
+                });
+            } elseif ( processedHash.cleanHash === "#view_result" ) {
+                $( "#view_result" ).jqmData( "url", processedHash.parsed.hash );
+                data.options.allowSamePageTransition = ( data.options.fromPage &&
+                    data.options.fromPage.attr( "id" ) === "view_result" );
+                $.mobile.activePage.animationComplete( function() {
+                    $.mobile.removeActiveLinkClass( true );
+                    $( "#section" ).text( processedHash.queryParameters.section );
+                });
+            } elseif ( processedHash.cleanHash === "#final_result" ) {
+                $( "#final_result" ).jqmData( "url", processedHash.parsed.hash );
+                data.options.allowSamePageTransition = ( data.options.fromPage &&
+                    data.options.fromPage.attr( "id" ) === "final_result" );
+                $.mobile.activePage.animationComplete( function() {
+                    $.mobile.removeActiveLinkClass( true );
+                    $( "#section" ).text( processedHash.queryParameters.section );
+                });
+            } elseif ( processedHash.cleanHash === "#player_info" ) {
+                $( "#player_info" ).jqmData( "url", processedHash.parsed.hash );
+                data.options.allowSamePageTransition = ( data.options.fromPage &&
+                    data.options.fromPage.attr( "id" ) === "player_info" );
+                $.mobile.activePage.animationComplete( function() {
+                    $.mobile.removeActiveLinkClass( true );
+                    $( "#section" ).text( processedHash.queryParameters.section );
+                });
             }
         }
     });

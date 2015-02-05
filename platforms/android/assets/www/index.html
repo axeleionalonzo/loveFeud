@@ -31,10 +31,17 @@
 						db.transaction(queryDB, errorCB)
 					}
 				}
-				
+
 				function populateDB(tx) {
+					tx.executeSql('DROP TABLE IF EXISTS Questions\
+			');		
+					tx.executeSql('DROP TABLE IF EXISTS Scores\
+			');
 					tx.executeSql('CREATE TABLE IF NOT EXISTS Questions(id INTEGER PRIMARY KEY AUTOINCREMENT,\
-			question TEXT UNIQUE NOT NULL,answer TEXT NOT NULL,player TEXT NOT NULL)\
+			question TEXT NOT NULL,answer TEXT NOT NULL,player TEXT NOT NULL)\
+			');		
+					tx.executeSql('CREATE TABLE IF NOT EXISTS Scores(id INTEGER PRIMARY KEY AUTOINCREMENT,\
+			player1 INTEGER,player2 INTEGER, player1_name TEXT, player2_name TEXT)\
 			');
 					tx.executeSql('SELECT * FROM Questions', [], querySuccess, errorCB)
 				}
@@ -72,21 +79,29 @@
 				});
 
 				$("#save").bind("click", function(event) {
-					var question = $.trim($("#question").val()).replace(/[^A-Za-z0-9 ]/g, '');
-					var answer = $.trim($("#answer").val());
+					var question = $.trim($("#question").val());
+					var answer = $.trim($("#answer").val()).replace(/[^A-Za-z0-9 ]/g, '');
 					var player = $.trim($("#player").val());
-					console.log(answer + ' ' + question + ' ' + player);
 							var num;
 							db.transaction(function(tx) {
 								tx.executeSql("SELECT question FROM Questions;", [], function(tx, results) {
 									num = results.rows.length;
-									console.log('ssssssssss' + num);
-									if (num > 4) {
+									if (num > 1) {
 										resetForm();
-										var y = confirm("You have already created 5 Questions. Its Player 2's turn. Do you want to proceed?");
+										var y = confirm("You have already created 2 Questions. Its Player 2's turn. Do you want to proceed?");
 										if (y == true) {
-											$.mobile.changePage($("#question-page2"), {
-											})
+											
+						db.transaction(function(tx) {
+							tx.executeSql("SELECT * FROM Scores", [], function(tx, results) {
+							var score = results.rows.item(0);
+							$.mobile.changePage($("#question-page2"), {
+							});
+							$("#ingame_player2_name").html(score['player2_name']);
+							$('#dataList').trigger('create');
+							$('#dataList').listview('refresh');
+							$.mobile.hidePageLoadingMsg()
+							})
+						})
 										} else {
 											$.mobile.changePage($("#question-page"), {
 											})
@@ -105,13 +120,13 @@
 												db.transaction(function(tx) {
 													tx.executeSql("SELECT question FROM Questions WHERE question=?;", [question], function(tx, results) {
 														len = results.rows.length;
-														console.log(len);
+														console.log('Clog: ' + len);
 														if (len >= 1) {
 															$("#question-page .error").html('Question already exists.').show()
 														} else {
 															db.transaction(function(tx) {
 																tx.executeSql("INSERT INTO Questions (question, answer, player) VALUES  (?, ?, ?)", [question, answer, player], queryDB, errorCB)
-																console.log(question + ' ' + answer + ' ' + player);
+																console.log('Clog: ' + question + ' ' + answer + ' ' + player);
 															});
 															app.addEvent();
 															db.transaction(queryDB, errorCB)
@@ -119,11 +134,11 @@
 													})
 												})
 											} else {
-												console.log("start update");
+												console.log('Clog: ' + "start update");
 												db.transaction(function(tx) {
 													tx.executeSql("UPDATE Questions SET question=?, answer=?, player=? WHERE id=? ", [question, answer, player, id], queryDB, errorCB)
 												});
-												console.log(question + ' ' + answer);
+												console.log('Clog: ' + question + ' ' + answer);
 												db.transaction(queryDB, errorCB)
 											}
 										}
@@ -133,20 +148,27 @@
 				});
 
 				$("#save_player2").bind("click", function(event) {
-					var question = $.trim($("#question_player2").val()).replace(/[^A-Za-z0-9 ]/g, '');
-					var answer = $.trim($("#answer_player2").val());
+					var question = $.trim($("#question_player2").val());
+					var answer = $.trim($("#answer_player2").val()).replace(/[^A-Za-z0-9 ]/g, '');
 					var player = $.trim($("#player_2").val());
-					console.log('aaaaaaaaa ' + question + ' ' + answer + ' ' + player);
 							var num;
 							db.transaction(function(tx) {
 								tx.executeSql("SELECT question FROM Questions;", [], function(tx, results) {
 									num = results.rows.length;
-									console.log('ssssssssss' + num);
-									if (num > 9) {
+									if (num > 3) {
 										resetForm();
-										var y = confirm("You have already created 5 Questions. Its time to START the game! Do you want to proceed?");
+										var y = confirm("You have already created 2 Questions. Its time to START the game! Do you want to proceed?");
 										if (y == true) {
-											$.mobile.changePage($("#question-page2"), {
+											db.transaction(function(tx) {
+												tx.executeSql("SELECT * FROM Scores", [], function(tx, results) {
+												var score = results.rows.item(0);
+												$.mobile.changePage($("#start_game"), {
+												});
+												$("#ingame_player2_name_entry").html(score['player2_name']);
+												$('#dataList').trigger('create');
+												$('#dataList').listview('refresh');
+												$.mobile.hidePageLoadingMsg()
+												})
 											})
 										} else {
 											$.mobile.changePage($("#question-page2"), {
@@ -166,13 +188,13 @@
 												db.transaction(function(tx) {
 													tx.executeSql("SELECT question FROM Questions WHERE question=?;", [question], function(tx, results) {
 														len = results.rows.length;
-														console.log(len);
+														console.log('Clog: ' + len);
 														if (len >= 1) {
 															$("#question-page2 .error_player2").html('Question already exists.').show()
 														} else {
 															db.transaction(function(tx) {
 																tx.executeSql("INSERT INTO Questions (question, answer, player) VALUES  (?, ?, ?)", [question, answer, player], queryDB, errorCB)
-																console.log(question + ' ' + answer + ' ' + player);
+																console.log('Clog: ' + question + ' ' + answer + ' ' + player);
 															});
 															app.addEvent();
 															db.transaction(queryDB, errorCB)
@@ -180,11 +202,11 @@
 													})
 												})
 											} else {
-												console.log("start update");
+												console.log('Clog: ' + "start update");
 												db.transaction(function(tx) {
 													tx.executeSql("UPDATE Questions SET question=?, answer=?, player=? WHERE id=? ", [question, answer, player, id], queryDB, errorCB)
 												});
-												console.log(question + ' ' + answer);
+												console.log('Clog: ' + question + ' ' + answer);
 												db.transaction(queryDB, errorCB)
 											}
 										}
@@ -192,6 +214,345 @@
 								})
 							})
 				});
+
+				$("#create_player_info").bind("click", function(event) {
+					var name_player1 = $.trim($("#player1_name").val());
+					var name_player2 = $.trim($("#player2_name").val());
+					if (name_player1 == '') {
+						$("#player_info .error").html("Please enter player 1's name").show()
+					} else if (name_player2 == ''){
+						$("#player_info .error").html("Please enter player 2's name").show()
+					} else {
+						db.transaction(function(tx) {
+						tx.executeSql("INSERT INTO Scores (player1, player2, player1_name, player2_name) VALUES  (?, ?, ?, ?)", [0, 0, name_player1, name_player2], queryDB, errorCB)
+						})
+						db.transaction(queryDB, errorCB)
+						db.transaction(function(tx) {
+							tx.executeSql("SELECT * FROM Scores", [], function(tx, results) {
+							var score = results.rows.item(0);
+							$.mobile.changePage($("#question-page"), {
+							});
+							$("#ingame_player1_name").html(score['player1_name']);
+							$('#dataList').trigger('create');
+							$('#dataList').listview('refresh');
+							$.mobile.hidePageLoadingMsg()
+							})
+						})
+					}
+				});
+
+				$("#proceed4").bind("click", function(event) {
+					db.transaction(function(tx) {
+						tx.executeSql("SELECT * FROM Questions;", [], function(tx, results) {
+									var row = results.rows.item(2);
+									$.mobile.showPageLoadingMsg(true);
+									$.mobile.changePage($("#player1_ingame_1"), {
+									});
+									$("#player1_ingame_question1").html(row['question']);
+									$('#dataList').trigger('create');
+									$('#dataList').listview('refresh');
+									$.mobile.hidePageLoadingMsg()
+						})
+					})
+				});
+
+				$("#play_again").bind("click", function(event) {
+					db.transaction(populateDB, errorCB, successCB);
+					$.mobile.showPageLoadingMsg(true);
+					$.mobile.changePage($("#index"), {
+					});
+					resetForm();
+					$.mobile.hidePageLoadingMsg()
+				});
+
+				$("#proceed1").bind("click", function(event) {
+					db.transaction(function(tx) {
+						tx.executeSql("SELECT * FROM Questions;", [], function(tx, results) {
+									var row = results.rows.item(0);
+									$.mobile.showPageLoadingMsg(true);
+									$.mobile.changePage($("#player2_ingame_1"), {
+									});
+									$("#player2_ingame_question1").html(row['question']);
+									$('#dataList').trigger('create');
+									$('#dataList').listview('refresh');
+									$.mobile.hidePageLoadingMsg()
+						})
+					})
+				});
+
+				$("#view_results").bind("click", function(event) {
+					db.transaction(function(tx) {
+						tx.executeSql("SELECT * FROM Scores", [], function(tx, results) {
+						var score = results.rows.item(0);
+						$.mobile.showPageLoadingMsg(true);
+						$.mobile.changePage($("#final_result"), {
+						});
+
+						console.log('Clog: FINAL ' + 'Player2 score = '+ score['player2']);
+						console.log('Clog: FINAL ' + 'Player1 score = '+ score['player1']);
+						console.log('Clog: FINAL ' + 'Score ID = ' + score['id']);
+
+						$("#player1_score").html(score['player1']);
+						$("#player2_score").html(score['player2']);
+						$("#ingame_player1_name_final").html(score['player1_name']);
+						$("#ingame_player2_name_final").html(score['player2_name']);
+						$('#dataList').trigger('create');
+						$('#dataList').listview('refresh');
+						$.mobile.hidePageLoadingMsg()
+						})
+					})
+				});
+
+				$("#proceed2").bind("click", function(event) {
+					$("#player2_ingame_question1 #player2_answer1").val('');
+					var ingame_answer = $.trim($("#player2_answer1").val()).replace(/[^A-Za-z0-9 ]/g, '');
+					console.log('Clog: ' + 'Your answer = '+ ingame_answer);
+					db.transaction(function(tx) {
+						tx.executeSql("SELECT * FROM Questions;", [], function(tx, results) {
+									var before = results.rows.item(0);
+									var row = results.rows.item(1);
+									$.mobile.showPageLoadingMsg(true);
+									$.mobile.changePage($("#player2_ingame_2"), {
+									});
+
+									console.log('Clog: ' + 'Player1 answer = '+ before['answer']);
+
+													if (ingame_answer==before['answer']) {
+														db.transaction(function(tx) {
+															tx.executeSql("SELECT * FROM Scores", [], function(tx, results) {
+															var score = results.rows.item(0);
+															var p1score = score['player1'];
+															var p2score = score['player2']+1;
+															var p1name = score['player1_name'];
+															var p2name = score['player2_name'];
+															var scoreID = score['id'];
+															db.transaction(function(tx) {
+																tx.executeSql("UPDATE Scores SET player1=?, player2=?, player1_name=?, player2_name=? WHERE id=? ", [p1score, p2score, p1name, p2name, scoreID], queryDB, errorCB)
+																	console.log('Clog: ' + 'UPDATED Correct');
+															});
+															console.log('Clog: ' + 'Player2 score = '+ p2score);
+															console.log('Clog: ' + 'Player1 score = '+ p1score);
+															console.log('Clog: ' + 'Score ID = ' + scoreID);
+															})
+														})
+														db.transaction(queryDB, errorCB)
+													} else {
+														db.transaction(function(tx) {
+															tx.executeSql("SELECT * FROM Scores", [], function(tx, results) {
+															var score = results.rows.item(0);
+															var p1score = score['player1'];
+															var p2score = score['player2'];
+															var p1name = score['player1_name'];
+															var p2name = score['player2_name'];
+															var scoreID = score['id'];
+															db.transaction(function(tx) {
+																tx.executeSql("UPDATE Scores SET player1=?, player2=?, player1_name=?, player2_name=? WHERE id=? ", [p1score, p2score, p1name, p2name, scoreID], queryDB, errorCB)
+																	console.log('Clog: ' + 'UPDATED Wrong');
+															});
+															console.log('Clog: ' + 'Player2 score = '+ p2score);
+															console.log('Clog: ' + 'Player1 score = '+ p1score);
+															console.log('Clog: ' + 'Score ID = ' + scoreID);
+															})
+														})
+														db.transaction(queryDB, errorCB)
+													}
+							resetForm();
+							$("#player2_ingame_question2").html(row['question']);
+							$('#dataList').trigger('create');
+							$('#dataList').listview('refresh');
+							$.mobile.hidePageLoadingMsg()
+						})
+					})
+				});
+
+				$("#proceed3").bind("click", function(event) {
+					$("#player2_ingame_question2 #player2_answer2").val('');
+					var ingame_answer = $.trim($("#player2_answer2").val()).replace(/[^A-Za-z0-9 ]/g, '');
+					console.log('Clog: ' + 'Your answer = '+ ingame_answer);
+					db.transaction(function(tx) {
+						tx.executeSql("SELECT * FROM Questions;", [], function(tx, results) {
+									var before = results.rows.item(1);
+									$.mobile.showPageLoadingMsg(true);
+
+									console.log('Clog: ' + 'Player1 answer = '+ before['answer']);
+											len = results.rows.length;
+											console.log('Clog: ' + 'Does player1 score exists: ' + len);
+													if (ingame_answer==before['answer']) {
+														db.transaction(function(tx) {
+															tx.executeSql("SELECT * FROM Scores", [], function(tx, results) {
+															var score = results.rows.item(0);
+															var p1score = score['player1'];
+															var p2score = score['player2']+1;
+															var p1name = score['player1_name'];
+															var p2name = score['player2_name'];
+															var scoreID = score['id'];
+															db.transaction(function(tx) {
+																tx.executeSql("UPDATE Scores SET player1=?, player2=?, player1_name=?, player2_name=? WHERE id=? ", [p1score, p2score, p1name, p2name, scoreID], queryDB, errorCB)
+																	console.log('Clog: ' + 'UPDATED Correct');
+															});
+															console.log('Clog: ' + 'Player2 score = '+ p2score);
+															console.log('Clog: ' + 'Player1 score = '+ p1score);
+															console.log('Clog: ' + 'Score ID = ' + scoreID);
+															})
+														})
+														db.transaction(queryDB, errorCB)
+													} else {
+														db.transaction(function(tx) {
+															tx.executeSql("SELECT * FROM Scores", [], function(tx, results) {
+															var score = results.rows.item(0);
+															var p1score = score['player1'];
+															var p2score = score['player2'];
+															var p1name = score['player1_name'];
+															var p2name = score['player2_name'];
+															var scoreID = score['id'];
+															db.transaction(function(tx) {
+																tx.executeSql("UPDATE Scores SET player1=?, player2=?, player1_name=?, player2_name=? WHERE id=? ", [p1score, p2score, p1name, p2name, scoreID], queryDB, errorCB)
+																	console.log('Clog: ' + 'UPDATED Wrong');
+															});
+															console.log('Clog: ' + 'Player2 score = '+ p2score);
+															console.log('Clog: ' + 'Player1 score = '+ p1score);
+															console.log('Clog: ' + 'Score ID = ' + scoreID);
+															})
+														})
+														db.transaction(queryDB, errorCB)
+													}
+							resetForm();
+							$.mobile.hidePageLoadingMsg()
+							db.transaction(function(tx) {
+								tx.executeSql("SELECT * FROM Scores", [], function(tx, results) {
+								var score = results.rows.item(0);
+								$.mobile.changePage($("#player1_entry"), {
+								});
+								$("#ingame_player1_name_entry").html(score['player1_name']);
+								$('#dataList').trigger('create');
+								$('#dataList').listview('refresh');
+								$.mobile.hidePageLoadingMsg()
+								})
+							})
+						})
+					})
+				});
+
+				$("#proceed5").bind("click", function(event) {
+					$("#player1_ingame_question1 #player1_answer1").val('');
+					var ingame_answer = $.trim($("#player1_answer1").val()).replace(/[^A-Za-z0-9 ]/g, '');
+					console.log('Clog: ' + 'Your answer = '+ ingame_answer);
+					db.transaction(function(tx) {
+						tx.executeSql("SELECT * FROM Questions;", [], function(tx, results) {
+									var before = results.rows.item(2);
+									var row = results.rows.item(3);
+									$.mobile.showPageLoadingMsg(true);
+									$.mobile.changePage($("#player1_ingame_2"), {
+									});
+
+									console.log('Clog: ' + 'Player2 answer = '+ before['answer']);
+													if (ingame_answer==before['answer']) {
+														db.transaction(function(tx) {
+															tx.executeSql("SELECT * FROM Scores", [], function(tx, results) {
+															var score = results.rows.item(0);
+															var p1score = score['player1']+1;
+															var p2score = score['player2'];
+															var p1name = score['player1_name'];
+															var p2name = score['player2_name'];
+															var scoreID = score['id'];
+															db.transaction(function(tx) {
+																tx.executeSql("UPDATE Scores SET player1=?, player2=?, player1_name=?, player2_name=? WHERE id=? ", [p1score, p2score, p1name, p2name, scoreID], queryDB, errorCB)
+																	console.log('Clog: ' + 'UPDATED Correct');
+															});
+															db.transaction(queryDB, errorCB)
+															console.log('Clog: ' + 'Player2 score = '+ p2score);
+															console.log('Clog: ' + 'Player1 score = '+ p1score);
+															console.log('Clog: ' + 'Score ID = ' + scoreID);
+															})
+														})
+														db.transaction(queryDB, errorCB)
+													} else {
+														db.transaction(function(tx) {
+															tx.executeSql("SELECT * FROM Scores", [], function(tx, results) {
+															var score = results.rows.item(0);
+															var p1score = score['player1'];
+															var p2score = score['player2'];
+															var p1name = score['player1_name'];
+															var p2name = score['player2_name'];
+															var scoreID = score['id'];
+															db.transaction(function(tx) {
+																tx.executeSql("UPDATE Scores SET player1=?, player2=?, player1_name=?, player2_name=? WHERE id=? ", [p1score, p2score, p1name, p2name, scoreID], queryDB, errorCB)
+																	console.log('Clog: ' + 'UPDATED Wrong');
+															});
+															console.log('Clog: ' + 'Player2 score = '+ p2score);
+															console.log('Clog: ' + 'Player1 score = '+ p1score);
+															console.log('Clog: ' + 'Score ID = ' + scoreID);
+															})
+														})
+														db.transaction(queryDB, errorCB)
+													}
+							resetForm();
+							$("#player1_ingame_question2").html(row['question']);
+							$('#dataList').trigger('create');
+							$('#dataList').listview('refresh');
+							$.mobile.hidePageLoadingMsg()
+						})
+					})
+				});	
+
+
+				$("#proceed6").bind("click", function(event) {
+					$("#player1_ingame_question2 #player1_answer2").val('');
+					var ingame_answer = $.trim($("#player1_answer2").val()).replace(/[^A-Za-z0-9 ]/g, '');
+					console.log('Clog: ' + 'Your answer = '+ ingame_answer);
+					db.transaction(function(tx) {
+						tx.executeSql("SELECT * FROM Questions;", [], function(tx, results) {
+									var before = results.rows.item(3);
+									$.mobile.showPageLoadingMsg(true);
+									$.mobile.changePage($("#view_result"), {
+									});
+									console.log('Clog: ' + 'Player2 answer = '+ before['answer']);
+													if (ingame_answer==before['answer']) {
+														db.transaction(function(tx) {
+															tx.executeSql("SELECT * FROM Scores", [], function(tx, results) {
+															var score = results.rows.item(0);
+															var p1score = score['player1']+1;
+															var p2score = score['player2'];
+															var p1name = score['player1_name'];
+															var p2name = score['player2_name'];
+															var scoreID = score['id'];
+															db.transaction(function(tx) {
+																tx.executeSql("UPDATE Scores SET player1=?, player2=?, player1_name=?, player2_name=? WHERE id=? ", [p1score, p2score, p1name, p2name, scoreID], queryDB, errorCB)
+																	console.log('Clog: ' + 'UPDATED Correct');
+															});
+															db.transaction(queryDB, errorCB)
+															console.log('Clog: ' + 'Player2 score = '+ p2score);
+															console.log('Clog: ' + 'Player1 score = '+ p1score);
+															console.log('Clog: ' + 'Score ID = ' + scoreID);
+															})
+														})
+														db.transaction(queryDB, errorCB)
+													} else {
+														db.transaction(function(tx) {
+															tx.executeSql("SELECT * FROM Scores", [], function(tx, results) {
+															var score = results.rows.item(0);
+															var p1score = score['player1'];
+															var p2score = score['player2'];
+															var p1name = score['player1_name'];
+															var p2name = score['player2_name'];
+															var scoreID = score['id'];
+															db.transaction(function(tx) {
+																tx.executeSql("UPDATE Scores SET player1=?, player2=?, player1_name=?, player2_name=? WHERE id=? ", [p1score, p2score, p1name, p2name, scoreID], queryDB, errorCB)
+																	console.log('Clog: ' + 'UPDATED Wrong');
+															});
+															console.log('Clog: ' + 'Player2 score = '+ p2score);
+															console.log('Clog: ' + 'Player1 score = '+ p1score);
+															console.log('Clog: ' + 'Score ID = ' + scoreID);
+															})
+														})
+														db.transaction(queryDB, errorCB)
+													}
+							resetForm();
+							$.mobile.hidePageLoadingMsg()
+						})
+					})
+				});	
+
 
 				$(".refresh").bind("click", function(event) {
 					db.transaction(queryDB, errorCB)
@@ -208,7 +569,11 @@
 					$("#question-page #answer").val('');
 					$("#question-page2 .error_player2").html('').hide();
 					$("#question-page2 #question_player2").val('');
-					$("#question-page2 #answer_player2").val('')
+					$("#question-page2 #answer_player2").val('');
+					$("#player2_ingame_1 #player2_answer1").val('');
+					$("#player2_ingame_2 #player2_answer2").val('');
+					$("#player1_ingame_1 #player1_answer1").val('');
+					$("#player1_ingame_2 #player1_answer2").val('')
 				}
 				
 				$("#question-page [data-role='content'] ol").on('tap taphold', 'li', function(event) {
@@ -388,7 +753,7 @@
 			
 			<br>
 			
-			<a href="#question-page" id="questions" data-role="button" data-inline="true">Start</a>
+			<a href="#player_info" id="player_info" data-role="button" data-inline="true">Start</a>
 
 			<br>
 
@@ -400,18 +765,49 @@
 	</div>
 	<!-- index End -->
 
+	<!-- Player Info -->
+	<div id="player_info" data-role="page" data-url="player_info">
+		<div data-role="header" data-theme="c"  data-position="fixed">
+			<h1><font color="red">Love</font> Feud</h1>
+			<a href="#index" data-role="button" data-theme="c" data-inline="true">Back</a>
+		</div><!-- /header -->
+
+		<div align="center" role="main" class="ui-content jqm-content jqm-fullwidth">
+			<br>
+
+			<h3>Let us first get to know each other</h3>
+			
+			<br>
+
+                <font color="red"><div class='error'></div></font>
+			
+            <div data-role="fieldcontain">
+            	<label for="player1_name">Player 1 Name:</label>
+            	<input type="text" name="player1_name" id="player1_name" required="true" maxlength="50" value="" />
+            </div>
+            <div data-role="fieldcontain">
+                <label for="player2_name">Player 2 Name:</label>
+                <input type="text" name="player2_name" id="player2_name" required="true" maxlength="50" value="" />
+            </div>
+
+			<a href="#" id="create_player_info" data-role="button" data-theme="c" data-inline="true">Start</a>
+		</div><!-- /content -->
+	</div>
+	<!-- Player Info -->
+
 	<!-- Question Page -->
 	<div id="question-page" data-role="page" data-url="question-page">
 		<div data-role="header" data-theme="c" data-position="fixed">
 			<h1><font color="red">Love</font> Feud</h1>
-			<a href="#index" data-role="button" data-theme="c" data-inline="true">Back</a>
 			<a href="#" id="save" data-role="button" data-theme="c" data-inline="true">Save</a>
 		</div><!-- /header -->
 		
 		<div align="center" role="main" class="ui-content jqm-content jqm-fullwidth">
             <div data-role="content">
 			<br>
-                <p><strong>Player <font color="red">1</font></strong></p>
+			<ul data-role="listview" id="dataList">
+				<li>It's <font color="red"><span id="ingame_player1_name"></span></font>'s Turn</li>
+			</ul>
                 <br>
                 <font color="red"><div class='error'></div></font>
 				
@@ -445,14 +841,15 @@
 	<div id="question-page2" data-role="page" data-url="question-page2">
 		<div data-role="header" data-theme="c" data-position="fixed">
 			<h1><font color="red">Love</font> Feud</h1>
-			<a href="#question-page" data-role="button" data-theme="c" data-inline="true">Back</a>
 			<a href="#" id="save_player2" data-role="button" data-theme="c" data-inline="true">Save</a>
 		</div><!-- /header -->
 		
 		<div align="center" role="main" class="ui-content jqm-content jqm-fullwidth">
             <div data-role="content">
 			<br>
-                <p><strong>Player <font color="red">2</font></strong></p>
+			<ul data-role="listview" id="dataList">
+				<li>It's <font color="red"><span id="ingame_player2_name"></span></font>'s Turn</li>
+			</ul>
                 <br>
                 <font color="red"><div class='error_player2'></div></font>
 				
@@ -540,21 +937,193 @@
 	<!-- Data Display Page for Player 2 End -->
 
 	<!-- Start Game Page -->
-	<div id="displayDataPage_player2" data-role="page" data-url="displayDataPage_player2">
+	<div id="start_game" data-role="page" data-url="start_game">
 		<div data-role="header" data-theme="c"  data-position="fixed">
 			<h1><font color="red">Love</font> Feud</h1>
-			<a href="#question-page2" data-role="button" data-theme="c" data-inline="true">Back</a>
 		</div><!-- /header -->
 		
-        <div data-role="content">
+		<div align="center" role="main" class="ui-content jqm-content jqm-fullwidth">
+			<h3>Let the <font color="red">Feud</font> Begin!</h3>
+			<br>
 			<ul data-role="listview" id="dataList">
-				<li>Question : <span id="feudQuestion_player2"></span></li>
-				<li>Answer : <span id="feudAnswer_player2"></span></li>
-				<li>Player : <span id="feudPlayer_player2"></span></li>
+				<li><font color="red"><span id="ingame_player2_name_entry"></span></font> will Start First!</li>
 			</ul>
-        </div><!-- /content -->
+			<br>
+
+			<a href="#" id="proceed1" data-role="button" data-theme="c" data-inline="true">Proceed</a>
+		</div><!-- /content -->
 	</div>
 	<!-- Start Game Page End -->
+
+	<!-- Player 2 inGame 1 -->
+	<div id="player2_ingame_1" data-role="page" data-url="player2_ingame_1">
+		<div data-role="header" data-theme="c"  data-position="fixed">
+			<h1><font color="red">Love</font> Feud</h1>
+		</div><!-- /header -->
+		
+		<div align="center" role="content" class="ui-content jqm-content jqm-fullwidth">
+
+			<h3>Your Question <font color="red">#1</font>!</h3>
+			<br>
+            
+			<ul data-role="listview" id="dataList">
+				<li>1. <span id="player2_ingame_question1"></span></li>
+			</ul>
+			<br>
+			<br>
+			<br>
+            <div data-role="fieldcontain">
+				<label for="player2_answer1">Your Answer:</label>
+                <input type="text" name="player2_answer1" id="player2_answer1" required="true" maxlength="50" value="" />
+            </div>
+
+			<a href="#" id="proceed2" data-role="button" data-theme="c" data-inline="true">Proceed</a>
+		</div><!-- /content -->
+	</div>
+	<!-- Player 2 inGame 1 End -->
+
+	<!-- Player 2 inGame 2 -->
+	<div id="player2_ingame_2" data-role="page" data-url="player2_ingame_2">
+		<div data-role="header" data-theme="c"  data-position="fixed">
+			<h1><font color="red">Love</font> Feud</h1>
+		</div><!-- /header -->
+		
+		<div align="center" role="content" class="ui-content jqm-content jqm-fullwidth">
+
+			<h3>Your Question <font color="red">#2</font>!</h3>
+			<br>
+            
+			<ul data-role="listview" id="dataList">
+				<li>2. <span id="player2_ingame_question2"></span></li>
+			</ul>
+			<br>
+			<br>
+			<br>
+            <div data-role="fieldcontain">
+				<label for="player2_answer2">Your Answer:</label>
+                <input type="text" name="player2_answer2" id="player2_answer2" required="true" maxlength="50" value="" />
+            </div>
+
+			<a href="#" id="proceed3" data-role="button" data-theme="c" data-inline="true">Proceed</a>
+		</div><!-- /content -->
+	</div>
+	<!-- Player 2 inGame 2 End -->
+
+	<!-- Player 1 Entry -->
+	<div id="player1_entry" data-role="page" data-url="player1_entry">
+		<div data-role="header" data-theme="c"  data-position="fixed">
+			<h1><font color="red">Love</font> Feud</h1>
+		</div><!-- /header -->
+		
+		<div align="center" role="main" class="ui-content jqm-content jqm-fullwidth">
+			<h3>Wow, <font color="red">Good</font> job!</h3>
+			<br>
+			<ul data-role="listview" id="dataList">
+				<li>It's <font color="red"><span id="ingame_player1_name_entry"></span></font>'s Turn!</li>
+			</ul>
+			<br>
+
+			<a href="#" id="proceed4" data-role="button" data-theme="c" data-inline="true">Proceed</a>
+		</div><!-- /content -->
+	</div>
+	<!-- Player 1 Entry -->
+
+	<!-- Player 1 inGame 1 -->
+	<div id="player1_ingame_1" data-role="page" data-url="player1_ingame_1">
+		<div data-role="header" data-theme="c"  data-position="fixed">
+			<h1><font color="red">Love</font> Feud</h1>
+		</div><!-- /header -->
+		
+		<div align="center" role="content" class="ui-content jqm-content jqm-fullwidth">
+
+			<h3>Your Question <font color="red">#1</font>!</h3>
+			<br>
+            
+			<ul data-role="listview" id="dataList">
+				<li>1. <span id="player1_ingame_question1"></span></li>
+			</ul>
+			<br>
+			<br>
+			<br>
+            <div data-role="fieldcontain">
+				<label for="player1_answer1">Your Answer:</label>
+                <input type="text" name="player1_answer1" id="player1_answer1" required="true" maxlength="50" value="" />
+            </div>
+
+			<a href="#" id="proceed5" data-role="button" data-theme="c" data-inline="true">Proceed</a>
+		</div><!-- /content -->
+	</div>
+	<!-- Player 1 inGame 1 End -->
+
+	<!-- Player 1 inGame 2 -->
+	<div id="player1_ingame_2" data-role="page" data-url="player1_ingame_2">
+		<div data-role="header" data-theme="c"  data-position="fixed">
+			<h1><font color="red">Love</font> Feud</h1>
+		</div><!-- /header -->
+		
+		<div align="center" role="content" class="ui-content jqm-content jqm-fullwidth">
+
+			<h3>Your Question <font color="red">#2</font>!</h3>
+			<br>
+            
+			<ul data-role="listview" id="dataList">
+				<li>2. <span id="player1_ingame_question2"></span></li>
+			</ul>
+			<br>
+			<br>
+			<br>
+            <div data-role="fieldcontain">
+				<label for="player1_answer2">Your Answer:</label>
+                <input type="text" name="player1_answer2" id="player1_answer2" required="true" maxlength="50" value="" />
+            </div>
+
+			<a href="#" id="proceed6" data-role="button" data-theme="c" data-inline="true">Proceed</a>
+		</div><!-- /content -->
+	</div>
+	<!-- Player 1 inGame 2 End -->
+
+	<!-- View Result -->
+	<div id="view_result" data-role="page" data-url="view_result">
+		<div data-role="header" data-theme="c"  data-position="fixed">
+			<h1><font color="red">Love</font> Feud</h1>
+		</div><!-- /header -->
+		
+		<div align="center" role="content" class="ui-content jqm-content jqm-fullwidth">
+
+			<h3>Well <font color="red">Done</font>!</h3>
+			<p>I dare you to view the results!</p>
+			<br>
+
+			<a href="#" id="view_results" data-role="button" data-theme="c" data-inline="true">Results</a>
+		</div><!-- /content -->
+	</div>
+	<!-- View Result End -->
+
+	<!-- Final Result -->
+	<div id="final_result" data-role="page" data-url="final_result">
+		<div data-role="header" data-theme="c"  data-position="fixed">
+			<h1><font color="red">Love</font> Feud</h1>
+			<a href="#view_result" data-role="button" data-theme="c" data-inline="true">Back</a>
+		</div><!-- /header -->
+		
+		<div align="center" role="content" class="ui-content jqm-content jqm-fullwidth">
+
+			<h3>Here's the <font color="red">Result</font>!</h3>
+			<br>
+            
+			<ul data-role="listview" id="dataList">
+				<li><font color="red"><span id="ingame_player1_name_final"></span></font>'s Score:  <span id="player1_score"></span></li>
+				<li><font color="red"><span id="ingame_player2_name_final"></span></font>'s Score:  <span id="player2_score"></span></li>
+			</ul>
+			<br>
+			<br>
+			<br>
+
+			<a href="#" id="play_again" data-role="button" data-theme="c" data-inline="true">Play Again</a>
+			<a href="#" id="share_onFacebook" data-role="button" data-theme="c" data-inline="true">Share</a>
+		</div><!-- /content -->
+	</div>
+	<!-- Final Result End -->
 	
 </body>
 </html>
