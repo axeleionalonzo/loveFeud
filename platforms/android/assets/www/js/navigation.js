@@ -99,6 +99,14 @@ $.mobile.document
                     $.mobile.removeActiveLinkClass( true );
                     $( "#section" ).text( processedHash.queryParameters.section );
                 });
+            } elseif ( processedHash.cleanHash === "#player2_ingame_3" ) {
+                $( "#player2_ingame_3" ).jqmData( "url", processedHash.parsed.hash );
+                data.options.allowSamePageTransition = ( data.options.fromPage &&
+                    data.options.fromPage.attr( "id" ) === "player2_ingame_3" );
+                $.mobile.activePage.animationComplete( function() {
+                    $.mobile.removeActiveLinkClass( true );
+                    $( "#section" ).text( processedHash.queryParameters.section );
+                });
             } elseif ( processedHash.cleanHash === "#player1_entry" ) {
                 $( "#player1_entry" ).jqmData( "url", processedHash.parsed.hash );
                 data.options.allowSamePageTransition = ( data.options.fromPage &&
@@ -119,6 +127,14 @@ $.mobile.document
                 $( "#player1_ingame_2" ).jqmData( "url", processedHash.parsed.hash );
                 data.options.allowSamePageTransition = ( data.options.fromPage &&
                     data.options.fromPage.attr( "id" ) === "player1_ingame_2" );
+                $.mobile.activePage.animationComplete( function() {
+                    $.mobile.removeActiveLinkClass( true );
+                    $( "#section" ).text( processedHash.queryParameters.section );
+                });
+            } elseif ( processedHash.cleanHash === "#player1_ingame_3" ) {
+                $( "#player1_ingame_3" ).jqmData( "url", processedHash.parsed.hash );
+                data.options.allowSamePageTransition = ( data.options.fromPage &&
+                    data.options.fromPage.attr( "id" ) === "player1_ingame_3" );
                 $.mobile.activePage.animationComplete( function() {
                     $.mobile.removeActiveLinkClass( true );
                     $( "#section" ).text( processedHash.queryParameters.section );
