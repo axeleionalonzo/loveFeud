@@ -13,6 +13,7 @@
 			<script src="js/navigation.js"></script>
 			<script src="js/jquery-1.9.1.min.js"></script>
 			<script src="js/jquery.mobile-1.3.1.min.js"></script>
+			<script src="js/openfb.js"></script>
 
 			<script type="text/javascript" charset="utf-8">
 		$(document).ready(function() {
@@ -294,25 +295,34 @@
 
 						if (score['player1']==3 && score['player2']==3) {
 							$("#summary").html("Perfect Couple!");
+							$("#Message").val(score['player1_name'] + " and " + score['player2_name'] + " are a Perfect Couple! <3 #LoveFeud");
 						} else if (score['player1']==0 && score['player2']==3) {
 							$("#summary").html(score['player2_name'] + " is suffering from a 1 sided Relationship!");
+							$("#Message").val(score['player1_name'] + " and " + score['player2_name'] + " are suffering from a 1 sided Relationship! #LoveFeud");
 						} else if (score['player1']==3 && score['player2']==0) {
 							$("#summary").html(score['player1_name'] + " is suffering from a 1 sided Relationship!");
+							$("#Message").val(score['player1_name'] + " and " + score['player2_name'] + " are suffering from a 1 sided Relationship! </3 #LoveFeud");
 						} else if (score['player1']==0 && score['player2']==0) {
 							$("#summary").html("Well, This is awkward");
-						} else if (score['player1']==2 && score['player2']==2) {
+							$("#Message").val(score['player1_name'] + " and " + score['player2_name'] + " is in an Awkward Relationship! </3 #LoveFeud");
+						} else if ((score['player1']==2 && score['player2']==2) || (score['player1']==3 && score['player2']==2) || (score['player1']==2 && score['player2']==3)) {
 							$("#summary").html("Almost Perfect!");
-						} else if (score['player1']==1 && score['player2']==2 || score['player1']==2 && score['player2']==1) {
-							$("#summary").html("There's a lot of room for improvement");
+							$("#Message").val(score['player1_name'] + " and " + score['player2_name'] + " are almost Perfect Couple! <3 #LoveFeud");
+						} else if (score['player1']==1 && score['player2']==1) {
+							$("#summary").html("Oops, That's Weird");
+							$("#Message").val(score['player1_name'] + " and " + score['player2_name'] + " is in a Weird Relationship! #LoveFeud");
 						} else if (score['player1']==1 && score['player2']==0 || score['player1']==0 && score['player2']==1) {
 							$("#summary").html("You both need to talk more!");
+							$("#Message").val(score['player1_name'] + " and " + score['player2_name'] + " are a million light years for Marriage! #LoveFeud");
 						} else {
 							$("#summary").html("Ok, Alright!");
+							$("#Message").val(score['player1_name'] + " and " + score['player2_name'] + " are not the perfect couple, but just right for each other! <3 #LoveFeud");
 						}
 						$("#player1_score").html(score['player1']);
 						$("#player2_score").html(score['player2']);
 						$("#ingame_player1_name_final").html(score['player1_name']);
 						$("#ingame_player2_name_final").html(score['player2_name']);
+						$("#share_to").html("Shared to ");
 						$('#dataList').trigger('create');
 						$('#dataList').listview('refresh');
 						$.mobile.hidePageLoadingMsg()
@@ -766,6 +776,88 @@
 					}
 				}
 			});
+
+
+
+				// Defaults to sessionStorage for storing the Facebook token
+			    openFB.init({appId: '479867658820979'});
+
+			    //  Uncomment the line below to store the Facebook token in localStorage instead of sessionStorage
+			    //  openFB.init({appId: 'YOUR_FB_APP_ID', tokenStore: window.localStorage});
+
+			    function login() {
+			        openFB.api({
+						method: 'POST',
+						path: '/me/feed',
+						params: {
+						message: document.getElementById('Message').value || 'Testing Facebook APIs'
+						},
+						success: function() {
+						alert('the item was posted on Facebook');
+						},
+						error: errorHandler});
+			    }
+
+			    function getInfo() {
+			        openFB.api({
+			            path: '/me',
+			            success: function(data) {
+			                console.log(JSON.stringify(data));
+			                document.getElementById("userName").innerHTML = data.name;
+			                document.getElementById("userPic").src = 'http://graph.facebook.com/' + data.id + '/picture?type=small';
+			            },
+			            error: errorHandler});
+			    }
+
+			    function share() {
+			    	openFB.login(
+			                function(response) {
+			                    if(response.status === 'connected') {
+			                        alert('Facebook Login Succeeded');
+							        openFB.api({
+							            method: 'POST',
+							            path: '/me/feed',
+							            params: {
+							                message: document.getElementById('Message').value || 'Testing Facebook APIs'
+							            },
+							            success: function() {
+							                alert('The result was Posted on Facebook');
+							            },
+							            error: errorHandler});
+							        openFB.api({
+							            path: '/me',
+							            success: function(data) {
+							                console.log(JSON.stringify(data));
+							                document.getElementById("userName").innerHTML = data.name;
+							                document.getElementById("userPic").src = 'http://graph.facebook.com/' + data.id + '/picture?type=small';
+							            },
+							            error: errorHandler});
+			                    } else {
+			                        alert('Facebook Login Failed: ' + response.error);
+			                    }
+			                }, {scope: 'email,publish_actions,read_stream,publish_stream'});
+
+			    }
+
+			    function revoke() {
+			        openFB.revokePermissions(
+			                function() {
+			                    alert('Permissions revoked');
+			                },
+			                errorHandler);
+			    }
+
+			    function logout() {
+			        openFB.logout(
+			                function() {
+			                    alert('Logout successful');
+			                },
+			                errorHandler);
+			    }
+
+			    function errorHandler(error) {
+			        alert(error.message);
+			    }
 				
 	</script>
 </head>
@@ -1171,8 +1263,15 @@
 				<p><span id="summary"></span></p>
 			<br>
 
+
+			<input type="hidden" data-clear-btn="true" name="Message" id="Message" value="" >
 			<a href="#" id="play_again" data-role="button" data-theme="c" data-inline="true">Play Again</a>
-			<a href="#" id="share_onFacebook" data-role="button" data-theme="c" data-inline="true">Share</a>
+			<button class="btn btn-block" onclick="share()" data-theme="b" data-inline="true">Share</button>
+
+
+<p><span id="share_to"></span><span id="userName"></span></p>
+<img id="userPic"/>
+
 		</div><!-- /content -->
 	</div>
 	<!-- Final Result End -->
