@@ -1,0 +1,1280 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Love Feud</title>
+			
+			<link rel="stylesheet" type="text/css" href="css/jquery.mobile-1.3.1.min.css" />
+			<link rel="stylesheet" type="text/css" href="css/jqm-demos.css" />
+			<link rel="stylesheet" type="text/css" href="css/font.css" />
+
+			<script src="cordova.js"></script>
+			<script src="js/navigation.js"></script>
+			<script src="js/jquery-1.9.1.min.js"></script>
+			<script src="js/jquery.mobile-1.3.1.min.js"></script>
+			<script src="js/openfb.js"></script>
+
+			<script type="text/javascript" charset="utf-8">
+		$(document).ready(function() {
+				document.addEventListener("deviceready", onDeviceReady, false);
+				var db = window.openDatabase("Database", "1.0", "LoveFeud", 200000);
+				var resource;
+
+				function onDeviceReady() {
+					db.transaction(populateDB, errorCB, successCB);
+					document.addEventListener('backbutton', onBack, false)
+				}
+
+				function onBack() {
+					if ($.mobile.activePage.is('#index')) {
+						navigator.app.exitApp()
+					} else {
+						db.transaction(queryDB, errorCB)
+					}
+				}
+
+				function populateDB(tx) {
+					tx.executeSql('DROP TABLE IF EXISTS Questions\
+			');		
+					tx.executeSql('DROP TABLE IF EXISTS Scores\
+			');
+					tx.executeSql('CREATE TABLE IF NOT EXISTS Questions(id INTEGER PRIMARY KEY AUTOINCREMENT,\
+			question TEXT NOT NULL,answer TEXT NOT NULL,player TEXT NOT NULL)\
+			');		
+					tx.executeSql('CREATE TABLE IF NOT EXISTS Scores(id INTEGER PRIMARY KEY AUTOINCREMENT,\
+			player1 INTEGER,player2 INTEGER, player1_name TEXT, player2_name TEXT)\
+			');
+					tx.executeSql('SELECT * FROM Questions', [], querySuccess, errorCB)
+				}
+
+				function successCB() {
+					db.transaction(queryDB, errorCB)
+				}
+
+				function queryDB(tx) {
+					tx.executeSql('SELECT * FROM Questions', [], querySuccess, errorCB)
+				}
+				
+				function querySuccess(tx, results) {
+					$.mobile.showPageLoadingMsg(true);
+					var len = results.rows.length;
+					$("#questionList").html('');
+					$("#questionList_player2").html('');
+					for (var i = 0; i < len; i++) {
+						var row = results.rows.item(i);
+						if (row["player"]=='player1') {
+							var htmlData = '<li id="' + row["id"] + '"><a href="#">' + row["question"] + '</a></li>';
+							$("#questionList").append(htmlData).listview('refresh')
+						} else {
+							var htmlData = '<li id="' + row["id"] + '"><a href="#">' + row["question"] + '</a></li>';
+							$("#questionList_player2").append(htmlData).listview('refresh')
+						}
+					}
+					$.mobile.hidePageLoadingMsg()
+				}
+				
+				function errorCB(err) {}
+				$("#question-page .error").html('').hide();
+				$(".addNew").bind("click", function(event) {
+					$("#question-page .error").html('').hide();
+				});
+
+				$("#save").bind("click", function(event) {
+					var question = $.trim($("#question").val());
+					var answer = $.trim($("#answer").val()).replace(/[^A-Za-z0-9 ]/g, '');
+					var player = $.trim($("#player").val());
+							var num;
+							db.transaction(function(tx) {
+								tx.executeSql("SELECT question FROM Questions;", [], function(tx, results) {
+									num = results.rows.length;
+									if (num > 2) {
+										resetForm();
+										var y = confirm("You have already created 3 Questions. Its Player 2's turn. Do you want to proceed?");
+										if (y == true) {
+											db.transaction(function(tx) {
+												tx.executeSql("SELECT * FROM Scores", [], function(tx, results) {
+												var score = results.rows.item(0);
+												$.mobile.changePage($("#question-page2"), {
+												});
+												$("#ingame_player2_name").html(score['player2_name']);
+												resetForm();
+												$.mobile.hidePageLoadingMsg()
+												})
+											})
+										} else {
+											$.mobile.changePage($("#question-page"), {
+											})
+										}
+									} else {
+										if (question == '') {
+											$("#question-page .error").html("Please enter the Question").show()
+										} else if (answer == '') {
+											$("#question-page .error").html("Please enter the Answer").show()
+										} else {
+											resetForm();
+											var id = $("#id").val();
+											$("#id").val('');
+											if (id == '') {
+												var len;
+												db.transaction(function(tx) {
+													tx.executeSql("SELECT question FROM Questions WHERE question=?;", [question], function(tx, results) {
+														len = results.rows.length;
+														console.log('Clog: ' + len);
+														if (len >= 1) {
+															$("#question-page .error").html('Question already exists.').show()
+														} else {
+															db.transaction(function(tx) {
+																tx.executeSql("INSERT INTO Questions (question, answer, player) VALUES  (?, ?, ?)", [question, answer, player], queryDB, errorCB)
+																console.log('Clog: ' + question + ' ' + answer + ' ' + player);
+															});
+															app.addEvent();
+															db.transaction(queryDB, errorCB)
+														}
+													})
+												})
+											} else {
+												console.log('Clog: ' + "start update");
+												db.transaction(function(tx) {
+													tx.executeSql("UPDATE Questions SET question=?, answer=?, player=? WHERE id=? ", [question, answer, player, id], queryDB, errorCB)
+												});
+												console.log('Clog: ' + question + ' ' + answer);
+												db.transaction(queryDB, errorCB)
+											}
+										}
+									}
+								})
+							})
+				});
+
+				$("#save_player2").bind("click", function(event) {
+					var question = $.trim($("#question_player2").val());
+					var answer = $.trim($("#answer_player2").val()).replace(/[^A-Za-z0-9 ]/g, '');
+					var player = $.trim($("#player_2").val());
+							var num;
+							db.transaction(function(tx) {
+								tx.executeSql("SELECT question FROM Questions;", [], function(tx, results) {
+									num = results.rows.length;
+									if (num > 5) {
+										resetForm();
+										var y = confirm("You have already created 3 Questions. Its time to START the game! Do you want to proceed?");
+										if (y == true) {
+											db.transaction(function(tx) {
+												tx.executeSql("SELECT * FROM Scores", [], function(tx, results) {
+												var score = results.rows.item(0);
+												$.mobile.changePage($("#start_game"), {
+												});
+												$("#ingame_player2_name_entry").html(score['player2_name']);
+												resetForm();
+												$.mobile.hidePageLoadingMsg()
+												})
+											})
+										} else {
+											$.mobile.changePage($("#question-page2"), {
+											})
+										}
+									} else {
+										if (question == '') {
+											$("#question-page2 .error_player2").html("Please enter the Question").show()
+										} else if (answer == '') {
+											$("#question-page2 .error_player2").html("Please enter the Answer").show()
+										} else {
+											resetForm();
+											var id = $("#id").val();
+											$("#id").val('');
+											if (id == '') {
+												var len;
+												db.transaction(function(tx) {
+													tx.executeSql("SELECT question FROM Questions WHERE question=?;", [question], function(tx, results) {
+														len = results.rows.length;
+														console.log('Clog: ' + len);
+														if (len >= 1) {
+															$("#question-page2 .error_player2").html('Question already exists.').show()
+														} else {
+															db.transaction(function(tx) {
+																tx.executeSql("INSERT INTO Questions (question, answer, player) VALUES  (?, ?, ?)", [question, answer, player], queryDB, errorCB)
+																console.log('Clog: ' + question + ' ' + answer + ' ' + player);
+															});
+															app.addEvent();
+															db.transaction(queryDB, errorCB)
+														}
+													})
+												})
+											} else {
+												console.log('Clog: ' + "start update");
+												db.transaction(function(tx) {
+													tx.executeSql("UPDATE Questions SET question=?, answer=?, player=? WHERE id=? ", [question, answer, player, id], queryDB, errorCB)
+												});
+												console.log('Clog: ' + question + ' ' + answer);
+												db.transaction(queryDB, errorCB)
+											}
+										}
+									}
+								})
+							})
+				});
+
+				$("#create_player_info").bind("click", function(event) {
+					var name_player1 = $.trim($("#player1_name").val());
+					var name_player2 = $.trim($("#player2_name").val());
+					if (name_player1 == '') {
+						$("#player_info .error").html("Please enter player 1's name").show()
+					} else if (name_player2 == ''){
+						$("#player_info .error").html("Please enter player 2's name").show()
+					} else {
+						db.transaction(function(tx) {
+						tx.executeSql("INSERT INTO Scores (player1, player2, player1_name, player2_name) VALUES  (?, ?, ?, ?)", [0, 0, name_player1, name_player2], queryDB, errorCB)
+						})
+						db.transaction(queryDB, errorCB)
+						db.transaction(function(tx) {
+							tx.executeSql("SELECT * FROM Scores", [], function(tx, results) {
+							var score = results.rows.item(0);
+							$.mobile.changePage($("#question-page"), {
+							});
+							$("#ingame_player1_name").html(score['player1_name']);
+							$('#dataList').trigger('create');
+							$('#dataList').listview('refresh');
+							$.mobile.hidePageLoadingMsg()
+							resetForm();
+							})
+						})
+					}
+				});
+
+				$("#proceed4").bind("click", function(event) {
+					db.transaction(function(tx) {
+						tx.executeSql("SELECT * FROM Questions;", [], function(tx, results) {
+									var row = results.rows.item(2);
+									$.mobile.showPageLoadingMsg(true);
+									$.mobile.changePage($("#player1_ingame_1"), {
+									});
+									$("#player1_ingame_question1").html(row['question']);
+									$('#dataList').trigger('create');
+									$('#dataList').listview('refresh');
+									$.mobile.hidePageLoadingMsg()
+						})
+					})
+				});
+
+				$("#play_again").bind("click", function(event) {
+					db.transaction(populateDB, errorCB, successCB);
+					$.mobile.showPageLoadingMsg(true);
+					$.mobile.changePage($("#index"), {
+					});
+					$("#play_again .error").html('').hide();
+					$.mobile.hidePageLoadingMsg()
+					resetForm();
+				});
+
+				$("#proceed1").bind("click", function(event) {
+					db.transaction(function(tx) {
+						tx.executeSql("SELECT * FROM Questions;", [], function(tx, results) {
+									var row = results.rows.item(0);
+									$.mobile.showPageLoadingMsg(true);
+									$.mobile.changePage($("#player2_ingame_1"), {
+									});
+									$("#player2_ingame_question1").html(row['question']);
+									$('#dataList').trigger('create');
+									$('#dataList').listview('refresh');
+									$.mobile.hidePageLoadingMsg()
+						})
+					})
+				});
+
+				$("#view_results").bind("click", function(event) {
+					db.transaction(function(tx) {
+						tx.executeSql("SELECT * FROM Scores", [], function(tx, results) {
+						var score = results.rows.item(0);
+						$.mobile.showPageLoadingMsg(true);
+						$.mobile.changePage($("#final_result"), {
+						});
+
+						console.log('Clog: FINAL ' + 'Player2 score = '+ score['player2']);
+						console.log('Clog: FINAL ' + 'Player1 score = '+ score['player1']);
+						console.log('Clog: FINAL ' + 'Score ID = ' + score['id']);
+
+						if (score['player1']==3 && score['player2']==3) {
+							$("#summary").html(" OMG! A match made in heaven! You two are perfect for each other. I have never heard of a couple better than you two.");
+							$("#Message").val(score['player1_name'] + " and " + score['player2_name'] + " OMG! A match made in heaven! You two are perfect for each other. I have never heard of a couple better than you two! <3 #LoveFeud");
+						} else if (score['player1']==0 && score['player2']==3) {
+							$("#summary").html(score['player2_name'] + " is suffering from a 1 sided Relationship!");
+							$("#Message").val(score['player1_name'] + " and " + score['player2_name'] + " are suffering from a 1 sided Relationship! #LoveFeud");
+						} else if (score['player1']==3 && score['player2']==0) {
+							$("#summary").html(score['player1_name'] + " is suffering from a 1 sided Relationship!");
+							$("#Message").val(score['player1_name'] + " and " + score['player2_name'] + " are suffering from a 1 sided Relationship! </3 #LoveFeud");
+						} else if (score['player1']==0 && score['player2']==0) {
+							$("#summary").html("Well, This is awkward");
+							$("#Message").val(score['player1_name'] + " and " + score['player2_name'] + " is in an Awkward Relationship! </3 #LoveFeud");
+						} else if ((score['player1']==2 && score['player2']==2) || (score['player1']==3 && score['player2']==2) || (score['player1']==2 && score['player2']==3)) {
+							$("#summary").html("Almost Perfect!");
+							$("#Message").val(score['player1_name'] + " and " + score['player2_name'] + " are almost Perfect Couple! <3 #LoveFeud");
+						} else if (score['player1']==1 && score['player2']==1) {
+							$("#summary").html("Oops, That's Weird");
+							$("#Message").val(score['player1_name'] + " and " + score['player2_name'] + " is in a Weird Relationship! #LoveFeud");
+						} else if (score['player1']==1 && score['player2']==0 || score['player1']==0 && score['player2']==1) {
+							$("#summary").html("You both need to talk more!");
+							$("#Message").val(score['player1_name'] + " and " + score['player2_name'] + " are a million light years for Marriage! #LoveFeud");
+						} else {
+							$("#summary").html("Ok, Alright!");
+							$("#Message").val(score['player1_name'] + " and " + score['player2_name'] + " are not the perfect couple, but just right for each other! <3 #LoveFeud");
+						}
+						$("#player1_score").html(score['player1']);
+						$("#player2_score").html(score['player2']);
+						$("#ingame_player1_name_final").html(score['player1_name']);
+						$("#ingame_player2_name_final").html(score['player2_name']);
+						$("#share_to").html("Shared to ");
+						$('#dataList').trigger('create');
+						$('#dataList').listview('refresh');
+						$.mobile.hidePageLoadingMsg()
+						resetForm();
+						})
+					})
+				});
+
+				$("#proceed2").bind("click", function(event) {
+					$("#player2_ingame_question1 #player2_answer1").val('');
+					var ingame_answer = $.trim($("#player2_answer1").val()).replace(/[^A-Za-z0-9 ]/g, '');
+					console.log('Clog: ' + 'Your answer = '+ ingame_answer);
+					db.transaction(function(tx) {
+						tx.executeSql("SELECT * FROM Questions;", [], function(tx, results) {
+									var before = results.rows.item(0);
+									var row = results.rows.item(1);
+									$.mobile.showPageLoadingMsg(true);
+									$.mobile.changePage($("#player2_ingame_2"), {
+									});
+
+									console.log('Clog: ' + 'Player1 answer = '+ before['answer']);
+
+													if (ingame_answer==before['answer']) {
+														db.transaction(function(tx) {
+															tx.executeSql("SELECT * FROM Scores", [], function(tx, results) {
+															var score = results.rows.item(0);
+															var p1score = score['player1'];
+															var p2score = score['player2']+1;
+															var p1name = score['player1_name'];
+															var p2name = score['player2_name'];
+															var scoreID = score['id'];
+															db.transaction(function(tx) {
+																tx.executeSql("UPDATE Scores SET player1=?, player2=?, player1_name=?, player2_name=? WHERE id=? ", [p1score, p2score, p1name, p2name, scoreID], queryDB, errorCB)
+																	console.log('Clog: ' + 'UPDATED Correct');
+															});
+															console.log('Clog: ' + 'Player2 score = '+ p2score);
+															console.log('Clog: ' + 'Player1 score = '+ p1score);
+															console.log('Clog: ' + 'Score ID = ' + scoreID);
+															})
+														})
+														db.transaction(queryDB, errorCB)
+													}
+							resetForm();
+							$("#player2_ingame_question2").html(row['question']);
+							$('#dataList').trigger('create');
+							$('#dataList').listview('refresh');
+							$.mobile.hidePageLoadingMsg()
+						})
+					})
+				});
+
+				$("#proceed3").bind("click", function(event) {
+					$("#player2_ingame_question2 #player2_answer2").val('');
+					var ingame_answer = $.trim($("#player2_answer2").val()).replace(/[^A-Za-z0-9 ]/g, '');
+					console.log('Clog: ' + 'Your answer = '+ ingame_answer);
+					db.transaction(function(tx) {
+						tx.executeSql("SELECT * FROM Questions;", [], function(tx, results) {
+									var before = results.rows.item(1);
+									var row = results.rows.item(2);
+									$.mobile.showPageLoadingMsg(true);
+									$.mobile.changePage($("#player2_ingame_3"), {
+									});
+
+									console.log('Clog: ' + 'Player1 answer = '+ before['answer']);
+
+													if (ingame_answer==before['answer']) {
+														db.transaction(function(tx) {
+															tx.executeSql("SELECT * FROM Scores", [], function(tx, results) {
+															var score = results.rows.item(0);
+															var p1score = score['player1'];
+															var p2score = score['player2']+1;
+															var p1name = score['player1_name'];
+															var p2name = score['player2_name'];
+															var scoreID = score['id'];
+															db.transaction(function(tx) {
+																tx.executeSql("UPDATE Scores SET player1=?, player2=?, player1_name=?, player2_name=? WHERE id=? ", [p1score, p2score, p1name, p2name, scoreID], queryDB, errorCB)
+																	console.log('Clog: ' + 'UPDATED Correct');
+															});
+															console.log('Clog: ' + 'Player2 score = '+ p2score);
+															console.log('Clog: ' + 'Player1 score = '+ p1score);
+															console.log('Clog: ' + 'Score ID = ' + scoreID);
+															})
+														})
+														db.transaction(queryDB, errorCB)
+													}
+							resetForm();
+							$("#player2_ingame_question3").html(row['question']);
+							$('#dataList').trigger('create');
+							$('#dataList').listview('refresh');
+							$.mobile.hidePageLoadingMsg()
+						})
+					})
+				});
+
+				$("#proceed3_1").bind("click", function(event) {
+					$("#player2_ingame_question3 #player2_answer3").val('');
+					var ingame_answer = $.trim($("#player2_answer3").val()).replace(/[^A-Za-z0-9 ]/g, '');
+					console.log('Clog: ' + 'Your answer = '+ ingame_answer);
+					db.transaction(function(tx) {
+						tx.executeSql("SELECT * FROM Questions;", [], function(tx, results) {
+									var before = results.rows.item(2);
+									$.mobile.showPageLoadingMsg(true);
+
+									console.log('Clog: ' + 'Player1 answer = '+ before['answer']);
+											len = results.rows.length;
+											console.log('Clog: ' + 'Does player1 score exists: ' + len);
+													if (ingame_answer==before['answer']) {
+														db.transaction(function(tx) {
+															tx.executeSql("SELECT * FROM Scores", [], function(tx, results) {
+															var score = results.rows.item(0);
+															var p1score = score['player1'];
+															var p2score = score['player2']+1;
+															var p1name = score['player1_name'];
+															var p2name = score['player2_name'];
+															var scoreID = score['id'];
+															db.transaction(function(tx) {
+																tx.executeSql("UPDATE Scores SET player1=?, player2=?, player1_name=?, player2_name=? WHERE id=? ", [p1score, p2score, p1name, p2name, scoreID], queryDB, errorCB)
+																	console.log('Clog: ' + 'UPDATED Correct');
+															});
+															console.log('Clog: ' + 'Player2 score = '+ p2score);
+															console.log('Clog: ' + 'Player1 score = '+ p1score);
+															console.log('Clog: ' + 'Score ID = ' + scoreID);
+															})
+														})
+														db.transaction(queryDB, errorCB)
+													}
+							resetForm();
+							$.mobile.hidePageLoadingMsg()
+							db.transaction(function(tx) {
+								tx.executeSql("SELECT * FROM Scores", [], function(tx, results) {
+								var score = results.rows.item(0);
+								$.mobile.changePage($("#player1_entry"), {
+								});
+								$("#ingame_player1_name_entry").html(score['player1_name']);
+								$('#dataList').trigger('create');
+								$('#dataList').listview('refresh');
+								$.mobile.hidePageLoadingMsg()
+								})
+							})
+						})
+					})
+				});
+
+				$("#proceed5").bind("click", function(event) {
+					$("#player1_ingame_question1 #player1_answer1").val('');
+					var ingame_answer = $.trim($("#player1_answer1").val()).replace(/[^A-Za-z0-9 ]/g, '');
+					console.log('Clog: ' + 'Your answer = '+ ingame_answer);
+					db.transaction(function(tx) {
+						tx.executeSql("SELECT * FROM Questions;", [], function(tx, results) {
+									var before = results.rows.item(2);
+									var row = results.rows.item(3);
+									$.mobile.showPageLoadingMsg(true);
+									$.mobile.changePage($("#player1_ingame_2"), {
+									});
+
+									console.log('Clog: ' + 'Player2 answer = '+ before['answer']);
+													if (ingame_answer==before['answer']) {
+														db.transaction(function(tx) {
+															tx.executeSql("SELECT * FROM Scores", [], function(tx, results) {
+															var score = results.rows.item(0);
+															var p1score = score['player1']+1;
+															var p2score = score['player2'];
+															var p1name = score['player1_name'];
+															var p2name = score['player2_name'];
+															var scoreID = score['id'];
+															db.transaction(function(tx) {
+																tx.executeSql("UPDATE Scores SET player1=?, player2=?, player1_name=?, player2_name=? WHERE id=? ", [p1score, p2score, p1name, p2name, scoreID], queryDB, errorCB)
+																	console.log('Clog: ' + 'UPDATED Correct');
+															});
+															db.transaction(queryDB, errorCB)
+															console.log('Clog: ' + 'Player2 score = '+ p2score);
+															console.log('Clog: ' + 'Player1 score = '+ p1score);
+															console.log('Clog: ' + 'Score ID = ' + scoreID);
+															})
+														})
+														db.transaction(queryDB, errorCB)
+													}
+							resetForm();
+							$("#player1_ingame_question2").html(row['question']);
+							$('#dataList').trigger('create');
+							$('#dataList').listview('refresh');
+							$.mobile.hidePageLoadingMsg()
+						})
+					})
+				});	
+
+				$("#proceed6").bind("click", function(event) {
+					$("#player1_ingame_question2 #player1_answer2").val('');
+					var ingame_answer = $.trim($("#player1_answer2").val()).replace(/[^A-Za-z0-9 ]/g, '');
+					console.log('Clog: ' + 'Your answer = '+ ingame_answer);
+					db.transaction(function(tx) {
+						tx.executeSql("SELECT * FROM Questions;", [], function(tx, results) {
+									var before = results.rows.item(3);
+									var row = results.rows.item(4);
+									$.mobile.showPageLoadingMsg(true);
+									$.mobile.changePage($("#player1_ingame_3"), {
+									});
+
+									console.log('Clog: ' + 'Player2 answer = '+ before['answer']);
+													if (ingame_answer==before['answer']) {
+														db.transaction(function(tx) {
+															tx.executeSql("SELECT * FROM Scores", [], function(tx, results) {
+															var score = results.rows.item(0);
+															var p1score = score['player1']+1;
+															var p2score = score['player2'];
+															var p1name = score['player1_name'];
+															var p2name = score['player2_name'];
+															var scoreID = score['id'];
+															db.transaction(function(tx) {
+																tx.executeSql("UPDATE Scores SET player1=?, player2=?, player1_name=?, player2_name=? WHERE id=? ", [p1score, p2score, p1name, p2name, scoreID], queryDB, errorCB)
+																	console.log('Clog: ' + 'UPDATED Correct');
+															});
+															db.transaction(queryDB, errorCB)
+															console.log('Clog: ' + 'Player2 score = '+ p2score);
+															console.log('Clog: ' + 'Player1 score = '+ p1score);
+															console.log('Clog: ' + 'Score ID = ' + scoreID);
+															})
+														})
+														db.transaction(queryDB, errorCB)
+													}
+							resetForm();
+							$("#player1_ingame_question3").html(row['question']);
+							$('#dataList').trigger('create');
+							$('#dataList').listview('refresh');
+							$.mobile.hidePageLoadingMsg()
+						})
+					})
+				});	
+
+
+				$("#proceed6_1").bind("click", function(event) {
+					$("#player1_ingame_question3 #player1_answer3").val('');
+					var ingame_answer = $.trim($("#player1_answer3").val()).replace(/[^A-Za-z0-9 ]/g, '');
+					console.log('Clog: ' + 'Your answer = '+ ingame_answer);
+					db.transaction(function(tx) {
+						tx.executeSql("SELECT * FROM Questions;", [], function(tx, results) {
+									var before = results.rows.item(4);
+									$.mobile.showPageLoadingMsg(true);
+									$.mobile.changePage($("#view_result"), {
+									});
+									console.log('Clog: ' + 'Player2 answer = '+ before['answer']);
+													if (ingame_answer==before['answer']) {
+														db.transaction(function(tx) {
+															tx.executeSql("SELECT * FROM Scores", [], function(tx, results) {
+															var score = results.rows.item(0);
+															var p1score = score['player1']+1;
+															var p2score = score['player2'];
+															var p1name = score['player1_name'];
+															var p2name = score['player2_name'];
+															var scoreID = score['id'];
+															db.transaction(function(tx) {
+																tx.executeSql("UPDATE Scores SET player1=?, player2=?, player1_name=?, player2_name=? WHERE id=? ", [p1score, p2score, p1name, p2name, scoreID], queryDB, errorCB)
+																	console.log('Clog: ' + 'UPDATED Correct');
+															});
+															db.transaction(queryDB, errorCB)
+															console.log('Clog: ' + 'Player2 score = '+ p2score);
+															console.log('Clog: ' + 'Player1 score = '+ p1score);
+															console.log('Clog: ' + 'Score ID = ' + scoreID);
+															})
+														})
+														db.transaction(queryDB, errorCB)
+													}
+							resetForm();
+							$.mobile.hidePageLoadingMsg()
+						})
+					})
+				});	
+
+
+				$(".refresh").bind("click", function(event) {
+					db.transaction(queryDB, errorCB)
+				});
+
+				$(".back").bind("click", function(event) {
+					resetForm();
+					db.transaction(queryDB, errorCB)
+				});
+				
+				function resetForm() {
+					$("#player_info .error").html('').hide();
+
+					$("#question-page .error").html('').hide();
+					$("#question-page #question").val('');
+					$("#question-page #answer").val('');
+
+					$("#question-page2 .error_player2").html('').hide();
+					$("#question-page2 #question_player2").val('');
+					$("#question-page2 #answer_player2").val('');
+
+					$("#player2_ingame_1 #player2_answer1").val('');
+					$("#player2_ingame_2 #player2_answer2").val('');
+					$("#player2_ingame_3 #player2_answer3").val('');
+
+					$("#player1_ingame_1 #player1_answer1").val('');
+					$("#player1_ingame_2 #player1_answer2").val('');
+					$("#player1_ingame_3 #player1_answer3").val('');
+				}
+				
+				$("#question-page [data-role='content'] ol").on('tap taphold', 'li', function(event) {
+					event.preventDefault();
+					event.stopImmediatePropagation();
+					var liId = this.id;
+					if (event.type === 'taphold') {
+						var $popup = $('#actionList-popup');
+						$("#actionList").html('');
+						$("#actionList").append('<li id="edit&' + liId + '">Edit</li>').listview('refresh');
+						$("#actionList").append('<li id="delete&' + liId + '">Delete</li>').listview('refresh');
+						$popup.popup();
+						$popup.popup('open');
+						$("#tapHoldCheck").val('true')
+					} else if (event.type === 'tap') {
+						if ($("#tapHoldCheck").val() == '') {
+							db.transaction(function(tx) {
+								tx.executeSql("SELECT question, answer, player FROM Questions WHERE id=?;", [liId], function(tx, results) {
+									var row = results.rows.item(0);
+									$.mobile.showPageLoadingMsg(true);
+									$.mobile.changePage($("#displayDataPage"), {
+									});
+									$("#feudQuestion").html(row['question']);
+									$("#feudAnswer").html(row['answer']);
+									$("#feudPlayer").html(row['player']);
+									$('#dataList').trigger('create');
+									$('#dataList').listview('refresh');
+									$.mobile.hidePageLoadingMsg()
+								})
+							})
+						}
+					}
+				});
+
+				$('#actionList-popup').bind({
+					popupafterclose: function(event, ui) {
+						$("#tapHoldCheck").val('')
+					}
+				});
+
+
+				$("#question-page2 [data-role='content'] ol").on('tap taphold', 'li', function(event) {
+					event.preventDefault();
+					event.stopImmediatePropagation();
+					var liId = this.id;
+					if (event.type === 'taphold') {
+						var $popup = $('#actionList_player2-popup');
+						$("#actionList_player2").html('');
+						$("#actionList_player2").append('<li id="edit&' + liId + '">Edit</li>').listview('refresh');
+						$("#actionList_player2").append('<li id="delete&' + liId + '">Delete</li>').listview('refresh');
+						$popup.popup();
+						$popup.popup('open');
+						$("#tapHoldCheck").val('true')
+					} else if (event.type === 'tap') {
+						if ($("#tapHoldCheck").val() == '') {
+							db.transaction(function(tx) {
+								tx.executeSql("SELECT question, answer, player FROM Questions WHERE id=?;", [liId], function(tx, results) {
+									var row = results.rows.item(0);
+									$.mobile.showPageLoadingMsg(true);
+									$.mobile.changePage($("#displayDataPage_player2"), {
+									});
+									$("#feudQuestion_player2").html(row['question']);
+									$("#feudAnswer_player2").html(row['answer']);
+									$("#feudPlayer_player2").html(row['player']);
+									$('#dataList').trigger('create');
+									$('#dataList').listview('refresh');
+									$.mobile.hidePageLoadingMsg()
+								})
+							})
+						}
+					}
+				});
+
+				$('#actionList_player2-popup').bind({
+					popupafterclose: function(event, ui) {
+						$("#tapHoldCheck").val('')
+					}
+				});
+
+				$("#question-page [data-role='popup'] ol").on('click', 'li', function(event) {
+					var action_liId = this.id.split('&');
+					var action = action_liId[0];
+					var id = action_liId[1];
+					if (action == 'edit') {
+						db.transaction(function(tx) {
+							tx.executeSql("SELECT question, answer, player FROM Questions WHERE id=?;", [id], function(tx, results) {
+								var row = results.rows.item(0);
+								$("#question").val(row['question']);
+								$("#answer").val(row['answer']);
+								$("#player").val(row['player']);
+								$("#id").val(id);
+								$.mobile.changePage($("#question-page"), {
+								})
+							})
+						})
+					}
+					if (action == 'delete') {
+						var y = confirm("Are you sure?");
+						if (y == true) {
+							db.transaction(function(tx) {
+								tx.executeSql("DELETE FROM Questions WHERE id=?", [id], queryDB, errorCB)
+							})
+							$.mobile.changePage($("#question-page"), {
+						})
+						} else {
+							$.mobile.changePage($("#question-page"), {
+							})
+						}
+					}
+				});
+
+				$("#question-page2 [data-role='popup'] ol").on('click', 'li', function(event) {
+					var action_liId = this.id.split('&');
+					var action = action_liId[0];
+					var id = action_liId[1];
+					if (action == 'edit') {
+						db.transaction(function(tx) {
+							tx.executeSql("SELECT question, answer, player FROM Questions WHERE id=?;", [id], function(tx, results) {
+								var row = results.rows.item(0);
+								$("#question_player2").val(row['question']);
+								$("#answer_player2").val(row['answer']);
+								$("#player_2").val(row['player']);
+								$("#id").val(id);
+								$.mobile.changePage($("#question-page2"), {
+								})
+							})
+						})
+					}
+					if (action == 'delete') {
+						var y = confirm("Are you sure?");
+						if (y == true) {
+							db.transaction(function(tx) {
+								tx.executeSql("DELETE FROM Questions WHERE id=?", [id], queryDB, errorCB)
+							})
+							$.mobile.changePage($("#question-page2"), {
+						})
+						} else {
+							$.mobile.changePage($("#question-page2"), {
+							})
+						}
+					}
+				});
+
+				function onConfirm(buttonIndex, id) {
+					if (buttonIndex === 1) {
+						db.transaction(function(tx) {
+							tx.executeSql("DELETE FROM Questions WHERE id=?", [id], queryDB, errorCB)
+						})
+						$.mobile.changePage($("#question-page"), {
+						})
+					}
+					if (buttonIndex === 2) {
+						$.mobile.changePage($("#question-page"), {
+						})
+					}
+				}
+			});
+
+
+
+				// Defaults to sessionStorage for storing the Facebook token
+			    openFB.init({appId: '479867658820979'});
+
+			    //  Uncomment the line below to store the Facebook token in localStorage instead of sessionStorage
+			    //  openFB.init({appId: 'YOUR_FB_APP_ID', tokenStore: window.localStorage});
+
+			    function login() {
+			        openFB.api({
+						method: 'POST',
+						path: '/me/feed',
+						params: {
+						message: document.getElementById('Message').value || 'Testing Facebook APIs'
+						},
+						success: function() {
+						alert('the item was posted on Facebook');
+						},
+						error: errorHandler});
+			    }
+
+			    function getInfo() {
+			        openFB.api({
+			            path: '/me',
+			            success: function(data) {
+			                console.log(JSON.stringify(data));
+			                document.getElementById("userName").innerHTML = data.name;
+			                document.getElementById("userPic").src = 'http://graph.facebook.com/' + data.id + '/picture?type=small';
+			            },
+			            error: errorHandler});
+			    }
+
+			    function share() {
+			    	openFB.login(
+			                function(response) {
+			                    if(response.status === 'connected') {
+			                        alert('Facebook Login Succeeded');
+							        openFB.api({
+							            method: 'POST',
+							            path: '/me/feed',
+							            params: {
+							                message: document.getElementById('Message').value || 'Testing Facebook APIs'
+							            },
+							            success: function() {
+							                alert('The result was Posted on Facebook');
+							            },
+							            error: errorHandler});
+							        openFB.api({
+							            path: '/me',
+							            success: function(data) {
+							                console.log(JSON.stringify(data));
+							                document.getElementById("userName").innerHTML = data.name;
+							                document.getElementById("userPic").src = 'http://graph.facebook.com/' + data.id + '/picture?type=small';
+							            },
+							            error: errorHandler});
+			                    } else {
+			                        alert('Facebook Login Failed: ' + response.error);
+			                    }
+			                }, {scope: 'email,publish_actions,read_stream,publish_stream'});
+
+			    }
+
+			    function revoke() {
+			        openFB.revokePermissions(
+			                function() {
+			                    alert('Permissions revoked');
+			                },
+			                errorHandler);
+			    }
+
+			    function logout() {
+			        openFB.logout(
+			                function() {
+			                    alert('Logout successful');
+			                },
+			                errorHandler);
+			    }
+
+			    function errorHandler(error) {
+			        alert(error.message);
+			    }
+				
+	</script>
+</head>
+<body>
+
+	<!-- index -->
+	<div data-role="page" class="jqm-demos" id="index" data-title="index">
+		<div align="center" role="main" class="ui-content jqm-content jqm-fullwidth">
+		
+			<br>
+			<br>
+			<br>
+			<br>
+
+			<h1><font color="red">Love</font> Feud</h1>
+
+			<br>
+
+		<div role="main" class="ui-content">
+			
+			<br>
+			
+			<a href="#player_info" id="player_info" data-role="button" data-inline="true">Start</a>
+
+			<br>
+
+			<a href="#third-page" data-role="button" data-theme="c" data-inline="true">Info</a>
+		</div>
+
+		</div><!-- /content -->
+
+	</div>
+	<!-- index End -->
+
+	<!-- Player Info -->
+	<div id="player_info" data-role="page" data-url="player_info">
+		<div data-role="header" data-theme="c"  data-position="fixed">
+			<h1><font color="red">Love</font> Feud</h1>
+			<a href="#index" data-role="button" data-theme="c" data-inline="true">Back</a>
+		</div><!-- /header -->
+
+		<div align="center" role="main" class="ui-content jqm-content jqm-fullwidth">
+			<br>
+
+			<h3>Who's <font color="red">who</font>?</h3>
+			
+			<br>
+
+                <font color="red"><div class='error'></div></font>
+			
+            <form>
+     			<input type="text" data-clear-btn="true" name="player1_name" id="player1_name" value="" placeholder="Player 1 Name">
+    			<input type="text" data-clear-btn="true" name="player2_name" id="player2_name" value="" placeholder="Player 2 Name">
+
+			<a href="#" id="create_player_info" data-role="button" data-theme="c" data-inline="true">Start</a>
+			</form>
+		</div><!-- /content -->
+	</div>
+	<!-- Player Info -->
+
+	<!-- Question Page -->
+	<div id="question-page" data-role="page" data-url="question-page">
+		<div data-role="header" data-theme="c" data-position="fixed">
+			<h1><font color="red">Love</font> Feud</h1>
+			<a href="#" id="save" data-role="button" data-theme="c" data-inline="true">Save</a>
+		</div><!-- /header -->
+		
+		<div align="center" role="main" class="ui-content jqm-content jqm-fullwidth">
+            <div data-role="content">
+			<br>
+				<p><font color="red"><span id="ingame_player1_name"></span></font>'s Feud Question</p>
+                <br>
+                <font color="red"><div class='error'></div></font>
+
+            <form>
+     			<input type="text" data-clear-btn="true" name="question" id="question" value="" placeholder="Your Question Here">
+    			<input type="text" data-clear-btn="true" name="answer" id="answer" value="" placeholder="Your Answer Here">
+
+                <input type="hidden" name="player" id="player" required="true" maxlength="50" value="player1" />
+                <input type="hidden" name="id" id="id" value="" />
+
+                <br>
+                <ol data-role="listview" id="questionList">  </ol>
+            </div>
+			<br>
+			
+			<div data-role="popup" id="actionList-popup" data-overlay-theme="c">
+				<ol data-role="listview" id="actionList"></ol>
+            </div>
+            <input type="hidden" id="tapHoldCheck" value="" />
+
+			</form>	
+		</div><!-- /content -->
+	</div>
+	<!-- Question Page End -->
+	
+	<!-- Question Page for Player 2 -->
+	<div id="question-page2" data-role="page" data-url="question-page2">
+		<div data-role="header" data-theme="c" data-position="fixed">
+			<h1><font color="red">Love</font> Feud</h1>
+			<a href="#" id="save_player2" data-role="button" data-theme="c" data-inline="true">Save</a>
+		</div><!-- /header -->
+		
+		<div align="center" role="main" class="ui-content jqm-content jqm-fullwidth">
+            <div data-role="content">
+			<br>
+				<p><font color="red"><span id="ingame_player2_name"></span></font>'s Feud Question</p>
+                <br>
+                <font color="red"><div class='error_player2'></div></font>
+
+            <form>
+     			<input type="text" data-clear-btn="true" name="question_player2" id="question_player2" value="" placeholder="Your Question Here">
+    			<input type="text" data-clear-btn="true" name="answer_player2" id="answer_player2" value="" placeholder="Your Answer Here">
+
+                <input type="hidden" name="player_2" id="player_2" required="true" maxlength="50" value="player2" />
+                <input type="hidden" name="id" id="id" value="" />
+
+                <br>
+                <ol data-role="listview" id="questionList_player2">  </ol>
+            </div>
+			<br>
+
+			<div data-role="popup" id="actionList_player2-popup" data-overlay-theme="c">
+				<ol data-role="listview" id="actionList_player2"></ol>
+            </div>
+            <input type="hidden" id="tapHoldCheck" value="" />
+
+            </form>
+		</div><!-- /content -->
+	</div>
+	<!-- Question Page for Player 2 End -->
+	
+	
+
+	<!-- Third Page -->
+	<div id="third-page" data-role="page" data-url="third-page">
+		<div data-role="header" data-theme="c"  data-position="fixed">
+			<h1><font color="red">Love</font> Feud</h1>
+			<a href="#index" data-role="button" data-theme="c" data-inline="true">Back</a>
+		</div><!-- /header -->
+		
+		<div role="main" class="ui-content jqm-content jqm-fullwidth">
+			<center>
+			<p>About <font color="red">Love</font> Feud.</p>
+			<br>
+			<p>Love Feud is a multi-player game that will provide information about how well you know a player. Each player will provide a questionnaire about themselves and will be answered by the other player. The result will yield a rating based on every correct answers, which can be shared on Facebook.</p>
+			</center>
+			<br>
+			<p><strong>Instructions</strong></p>
+		</div><!-- /content -->
+	</div>
+	<!-- Third Page End -->
+	
+
+
+	<!-- Data Display Page -->
+	<div id="displayDataPage" data-role="page" data-url="displayDataPage">
+		<div data-role="header" data-theme="c"  data-position="fixed">
+			<h1><font color="red">Love</font> Feud</h1>
+			<a href="#question-page" data-role="button" data-theme="c" data-inline="true">Back</a>
+		</div><!-- /header -->
+		
+        <div data-role="content">
+			<ul data-role="listview" id="dataList">
+				<li>Question : <span id="feudQuestion"></span></li>
+				<li>Answer : <span id="feudAnswer"></span></li>
+				<li>Player : <span id="feudPlayer"></span></li>
+			</ul>
+        </div><!-- /content -->
+	</div>
+	<!-- Data Display Page End -->
+
+	<!-- Data Display Page for Player 2 -->
+	<div id="displayDataPage_player2" data-role="page" data-url="displayDataPage_player2">
+		<div data-role="header" data-theme="c"  data-position="fixed">
+			<h1><font color="red">Love</font> Feud</h1>
+			<a href="#question-page2" data-role="button" data-theme="c" data-inline="true">Back</a>
+		</div><!-- /header -->
+		
+        <div data-role="content">
+			<ul data-role="listview" id="dataList">
+				<li>Question : <span id="feudQuestion_player2"></span></li>
+				<li>Answer : <span id="feudAnswer_player2"></span></li>
+				<li>Player : <span id="feudPlayer_player2"></span></li>
+			</ul>
+        </div><!-- /content -->
+	</div>
+	<!-- Data Display Page for Player 2 End -->
+
+	<!-- Start Game Page -->
+	<div id="start_game" data-role="page" data-url="start_game">
+		<div data-role="header" data-theme="c"  data-position="fixed">
+			<h1><font color="red">Love</font> Feud</h1>
+		</div><!-- /header -->
+		
+		<div align="center" role="main" class="ui-content jqm-content jqm-fullwidth">
+			<h3>Let the <font color="red">Feud</font> Begin!</h3>
+			<br>
+				<p><font color="red"><span id="ingame_player2_name_entry"></span></font> will Start First!</p>
+			<br>
+
+			<a href="#" id="proceed1" data-role="button" data-theme="c" data-inline="true">Proceed</a>
+		</div><!-- /content -->
+	</div>
+	<!-- Start Game Page End -->
+
+	<!-- Player 2 inGame 1 -->
+	<div id="player2_ingame_1" data-role="page" data-url="player2_ingame_1">
+		<div data-role="header" data-theme="c"  data-position="fixed">
+			<h1><font color="red">Love</font> Feud</h1>
+		</div><!-- /header -->
+		
+		<div align="center" role="content" class="ui-content jqm-content jqm-fullwidth">
+
+			<h3>Your Question <font color="red">#1</font>!</h3>
+			<br>
+            
+				<p>1. <span id="player2_ingame_question1"></span></p>
+			<br>
+			<br>
+			<br>
+            <form>
+    			<input type="text" data-clear-btn="true" name="player2_answer1" id="player2_answer1" value="" placeholder="Your Answer to the Question">
+
+			<a href="#" id="proceed2" data-role="button" data-theme="c" data-inline="true">Proceed</a>
+			</form>
+		</div><!-- /content -->
+	</div>
+	<!-- Player 2 inGame 1 End -->
+
+	<!-- Player 2 inGame 2 -->
+	<div id="player2_ingame_2" data-role="page" data-url="player2_ingame_2">
+		<div data-role="header" data-theme="c"  data-position="fixed">
+			<h1><font color="red">Love</font> Feud</h1>
+		</div><!-- /header -->
+		
+		<div align="center" role="content" class="ui-content jqm-content jqm-fullwidth">
+
+			<h3>Your Question <font color="red">#2</font>!</h3>
+			<br>
+            
+				<p>2. <span id="player2_ingame_question2"></span></p>
+			<br>
+			<br>
+			<br>
+
+
+            <form>
+    			<input type="text" data-clear-btn="true" name="player2_answer2" id="player2_answer2" value="" placeholder="Your Answer to the Question">
+
+			<a href="#" id="proceed3" data-role="button" data-theme="c" data-inline="true">Proceed</a>
+			</form>
+		</div><!-- /content -->
+	</div>
+	<!-- Player 2 inGame 2 End -->
+
+	<!-- Player 2 inGame 3 -->
+	<div id="player2_ingame_3" data-role="page" data-url="player2_ingame_3">
+		<div data-role="header" data-theme="c"  data-position="fixed">
+			<h1><font color="red">Love</font> Feud</h1>
+		</div><!-- /header -->
+		
+		<div align="center" role="content" class="ui-content jqm-content jqm-fullwidth">
+
+			<h3>Your Question <font color="red">#3</font>!</h3>
+			<br>
+            
+				<p>3. <span id="player2_ingame_question3"></span></p>
+			<br>
+			<br>
+			<br>
+
+            <form>
+    			<input type="text" data-clear-btn="true" name="player2_answer3" id="player2_answer3" value="" placeholder="Your Answer to the Question">
+			<a href="#" id="proceed3_1" data-role="button" data-theme="c" data-inline="true">Proceed</a>
+			</form>
+
+		</div><!-- /content -->
+	</div>
+	<!-- Player 2 inGame 2 End -->
+
+	<!-- Player 1 Entry -->
+	<div id="player1_entry" data-role="page" data-url="player1_entry">
+		<div data-role="header" data-theme="c"  data-position="fixed">
+			<h1><font color="red">Love</font> Feud</h1>
+		</div><!-- /header -->
+		
+		<div align="center" role="main" class="ui-content jqm-content jqm-fullwidth">
+			<h3>Wow, <font color="red">Good</font> job!</h3>
+			<br>
+				<p>It's <font color="red"><span id="ingame_player1_name_entry"></span></font>'s Turn!</p>
+			<br>
+
+			<a href="#" id="proceed4" data-role="button" data-theme="c" data-inline="true">Proceed</a>
+		</div><!-- /content -->
+	</div>
+	<!-- Player 1 Entry -->
+
+	<!-- Player 1 inGame 1 -->
+	<div id="player1_ingame_1" data-role="page" data-url="player1_ingame_1">
+		<div data-role="header" data-theme="c"  data-position="fixed">
+			<h1><font color="red">Love</font> Feud</h1>
+		</div><!-- /header -->
+		
+		<div align="center" role="content" class="ui-content jqm-content jqm-fullwidth">
+
+			<h3>Your Question <font color="red">#1</font>!</h3>
+			<br>
+            
+				<p>1. <span id="player1_ingame_question1"></span></p>
+			<br>
+			<br>
+			<br>
+            <form>
+    			<input type="text" data-clear-btn="true" name="player1_answer1" id="player1_answer1" value="" placeholder="Your Answer to the Question">
+
+			<a href="#" id="proceed5" data-role="button" data-theme="c" data-inline="true">Proceed</a>
+			</form>
+		</div><!-- /content -->
+	</div>
+	<!-- Player 1 inGame 1 End -->
+
+	<!-- Player 1 inGame 2 -->
+	<div id="player1_ingame_2" data-role="page" data-url="player1_ingame_2">
+		<div data-role="header" data-theme="c"  data-position="fixed">
+			<h1><font color="red">Love</font> Feud</h1>
+		</div><!-- /header -->
+		
+		<div align="center" role="content" class="ui-content jqm-content jqm-fullwidth">
+
+			<h3>Your Question <font color="red">#2</font>!</h3>
+			<br>
+            
+				<p>2. <span id="player1_ingame_question2"></span></p>
+			<br>
+			<br>
+			<br>
+            <form>
+    			<input type="text" data-clear-btn="true" name="player1_answer2" id="player1_answer2" value="" placeholder="Your Answer to the Question">
+			<a href="#" id="proceed6" data-role="button" data-theme="c" data-inline="true">Proceed</a>
+			</form>
+		</div><!-- /content -->
+	</div>
+	<!-- Player 1 inGame 2 End -->
+
+
+	<!-- Player 1 inGame 3 -->
+	<div id="player1_ingame_3" data-role="page" data-url="player1_ingame_3">
+		<div data-role="header" data-theme="c"  data-position="fixed">
+			<h1><font color="red">Love</font> Feud</h1>
+		</div><!-- /header -->
+		
+		<div align="center" role="content" class="ui-content jqm-content jqm-fullwidth">
+
+			<h3>Your Question <font color="red">#3</font>!</h3>
+			<br>
+            
+				<p>3. <span id="player1_ingame_question3"></span></p>
+			<br>
+			<br>
+			<br>
+            <form>
+    			<input type="text" data-clear-btn="true" name="player1_answer3" id="player1_answer3" value="" placeholder="Your Answer to the Question">
+			<a href="#" id="proceed6_1" data-role="button" data-theme="c" data-inline="true">Proceed</a>
+			</form>
+		</div><!-- /content -->
+	</div>
+	<!-- Player 1 inGame 3 End -->
+
+	<!-- View Result -->
+	<div id="view_result" data-role="page" data-url="view_result">
+		<div data-role="header" data-theme="c"  data-position="fixed">
+			<h1><font color="red">Love</font> Feud</h1>
+		</div><!-- /header -->
+		
+		<div align="center" role="content" class="ui-content jqm-content jqm-fullwidth">
+
+			<h3>Well <font color="red">Done</font>!</h3>
+			<p>I dare you to view the results!</p>
+			<br>
+
+			<a href="#" id="view_results" data-role="button" data-theme="c" data-inline="true">Results</a>
+		</div><!-- /content -->
+	</div>
+	<!-- View Result End -->
+
+	<!-- Final Result -->
+	<div id="final_result" data-role="page" data-url="final_result">
+		<div data-role="header" data-theme="c"  data-position="fixed">
+			<h1><font color="red">Love</font> Feud</h1>
+			<a href="#view_result" data-role="button" data-theme="c" data-inline="true">Back</a>
+		</div><!-- /header -->
+		
+		<div align="center" role="content" class="ui-content jqm-content jqm-fullwidth">
+
+			<h3>Here's the <font color="red">Result</font>!</h3>
+			<br>
+            
+				<p><font color="red"><span id="ingame_player1_name_final"></span></font>'s Score:  <span id="player1_score"></span></p>
+				<p><font color="red"><span id="ingame_player2_name_final"></span></font>'s Score:  <span id="player2_score"></span></p>
+
+			<br>
+				<p><span id="summary"></span></p>
+			<br>
+
+
+			<input type="hidden" data-clear-btn="true" name="Message" id="Message" value="" >
+			<a href="#" id="play_again" data-role="button" data-theme="c" data-inline="true">Play Again</a>
+			<button class="btn btn-block" onclick="share()" data-theme="b" data-inline="true">Share</button>
+
+
+<p><span id="share_to"></span><span id="userName"></span></p>
+<img id="userPic"/>
+
+		</div><!-- /content -->
+	</div>
+	<!-- Final Result End -->
+	
+</body>
+</html>
